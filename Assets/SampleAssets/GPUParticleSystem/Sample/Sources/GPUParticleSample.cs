@@ -91,7 +91,7 @@ public class GPUParticleSample : GPUParticleBase<GPUParticleData> {
             Vector3 mpos = Input.mousePosition;
             mpos.z = 10;
             Vector3 pos = camera.ScreenToWorldPoint(mpos);
-            EmitParticle(pos);
+            EmitParticle(Vector3.zero);
         }
         UpdateParticle();
     }

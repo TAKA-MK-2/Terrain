@@ -1,0 +1,106 @@
+﻿#pragma kernel Initialize
+#pragma kernel Emit
+#pragma kernel Update
+
+// GPUパーティクル
+struct GPUParticle
+{
+	// 識別番号
+	int index;
+	// 活動状態
+	bool isActive;
+	// 座標
+	float3 position;
+	// 速度
+	float3 velocity;
+	// 回転
+	float3 rotation;
+	// 角速度
+	float3 angVelocity;
+	// スケール	
+	float scale;
+	// カラー
+	float3 color;
+	// 経過時間
+	float elapsedTime;
+	// 生存時間
+	float lifeTime;
+};
+
+// パーティクルのバッファ
+RWStructuredBuffer<GPUParticle> _particles;
+
+// 1フレームの経過時間
+float _deltaTime;
+// 放出範囲
+float4 _range;
+// 速度
+float4 _velocity;
+// 角速度
+float4 _angVelocity;
+
+// floatの乱数を取得する
+float rand(float2 seed)
+{
+	return frac(sin(dot(seed.xy, float2(12.9898, 78.233))) * 43758.5453);
+}
+
+// float3の乱数を取得する
+float3 rand3(float2 seed)
+{
+	return 2.0 * (float3(rand(seed * 1), rand(seed * 2), rand(seed * 3)) - 0.5);
+}
+
+// 初期化処理
+[numthreads(1024, 1, 1)]
+void Initialize(uint id : SV_DispatchThreadID)
+{
+	// 乱数のシード値
+	float2 seed = float2(id + 1, id + 2);
+	// ランダムな座標
+	float3 pos = rand3(seed);
+	// 回転を設定
+	float3 rot = rand3(seed + 3);
+	// パーティクルの設定
+	GPUParticle p = _particles[id];
+	p.index = id;
+	p.isActive = true;
+	p.position = pos * _range.xyz;
+	p.velocity = pos * _velocity.xyz;
+	p.rotation = rot * _angVelocity.xyz;
+	p.angVelocity = rot * _angVelocity.xyz;
+	p.scale = 1;
+	p.color = rand3(seed + 4);
+	p.elapsedTime = 0.0;
+	p.lifeTime = 1;
+	_particles[id] = p;
+}
+
+// 放出処理
+[numthreads(1024, 1, 1)]
+void Emit(uint id : SV_DispatchThreadID)
+{
+	if (!_particles[id].isActive) Initialize(id);
+}
+
+// 更新処理
+[numthreads(1024, 1, 1)]
+void Update(uint id : SV_DispatchThreadID)
+{
+	GPUParticle p = _particles[id];
+	// 生存時間を超えてたら消滅する
+	if (p.elapsedTime < p.lifeTime)
+	{
+		p.isActive = true;
+		p.elapsedTime += _deltaTime;
+		p.position += p.velocity * _deltaTime;
+		p.velocity.y += -4 * _deltaTime;
+		p.rotation += p.angVelocity * _deltaTime;
+		p.scale = (1.0 - pow(p.elapsedTime / p.lifeTime, 3.0)) * 0.1;
+	}
+	else
+	{
+		p.isActive = false;
+	}
+	_particles[id] = p;
+}

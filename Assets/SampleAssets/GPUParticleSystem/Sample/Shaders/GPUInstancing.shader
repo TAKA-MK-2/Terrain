@@ -7,8 +7,8 @@
 
 	CGINCLUDE
 #include "UnityCG.cginc"
-#include "Assets/Packages/GPUParticleSystem/Shaders/Libs/ColorUtil.cginc"
-#include "Assets/Packages/GPUParticleSystem/Shaders/Libs/Quaternion.cginc"
+#include "Assets/SampleAssets/GPUParticleSystem/Shaders/Libs/ColorUtil.cginc"
+#include "Assets/SampleAssets/GPUParticleSystem/Shaders/Libs/Quaternion.cginc"
 #include "GPUParticleCommon.cginc"
 
 	struct VertexData
