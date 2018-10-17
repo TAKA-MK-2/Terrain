@@ -61,31 +61,17 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Assets\SampleAssets\GPUParticleSystem\Sample\Sources\CameraRotate.cs" />
-    <Compile Include="Assets\SampleAssets\GPUParticleSystem\Sample\Sources\GPUParticleCullingRendererSample.cs" />
-    <Compile Include="Assets\SampleAssets\GPUParticleSystem\Sample\Sources\GPUParticleInstancingRendererSample.cs" />
-    <Compile Include="Assets\SampleAssets\GPUParticleSystem\Sample\Sources\GPUParticleRendererSample.cs" />
-    <Compile Include="Assets\SampleAssets\GPUParticleSystem\Sample\Sources\GPUParticleSample.cs" />
-    <Compile Include="Assets\SampleAssets\GPUParticleSystem\Scripts\ShaderDefines.cs" />
-    <Compile Include="Assets\SampleAssets\GPUParticleSystem\Sources\Base\GPUParticleBase.cs" />
-    <Compile Include="Assets\SampleAssets\GPUParticleSystem\Sources\Base\GPUParticleCullingRendererBase.cs" />
-    <Compile Include="Assets\SampleAssets\GPUParticleSystem\Sources\Base\GPUParticleInstancingRendererBase.cs" />
-    <Compile Include="Assets\SampleAssets\GPUParticleSystem\Sources\Base\GPUParticleInstancingSingleCameraRendererBase.cs" />
-    <Compile Include="Assets\SampleAssets\GPUParticleSystem\Sources\Base\GPUParticleRendererBase.cs" />
-    <Compile Include="Assets\SampleAssets\GPUParticleSystem\Sources\Base\GPUParticleSingleCameraCullingRendererBase.cs" />
     <Compile Include="Assets\Scripts\FPSCounter.cs" />
+    <Compile Include="Assets\Scripts\GBufferUtils.cs" />
     <Compile Include="Assets\Scripts\GenerateTerrain.cs" />
     <Compile Include="Assets\Scripts\GPUParticleManager.cs" />
-    <None Include="Assets\SampleAssets\GPUParticleSystem\Shaders\Libs\ColorUtil.cginc" />
+    <Compile Include="Assets\Scripts\KernelExample.cs" />
+    <Compile Include="Assets\Scripts\PlayerController.cs" />
+    <None Include="Assets\ComputeShaders\Sample.compute" />
+    <None Include="Assets\Shaders\GBufferCopy.shader" />
     <None Include="Assets\Shaders\GPUParticle.shader" />
-    <None Include="Assets\SampleAssets\GPUParticleSystem\Sample\ComputeShaders\GPUParticle.compute" />
     <None Include="Assets\ComputeShaders\CalculateTerrain.compute" />
-    <None Include="Assets\SampleAssets\GPUParticleSystem\Sample\ComputeShaders\GPUParticleCulling.compute" />
-    <None Include="Assets\SampleAssets\GPUParticleSystem\Shaders\Libs\Quaternion.cginc" />
-    <None Include="Assets\SampleAssets\GPUParticleSystem\Sample\Shaders\GPUInstancing.shader" />
     <None Include="Assets\ComputeShaders\GPUParticle.compute" />
-    <None Include="Assets\SampleAssets\GPUParticleSystem\Sample\Shaders\GPUParticle.shader" />
-    <None Include="Assets\SampleAssets\GPUParticleSystem\Sample\Shaders\GPUParticleCommon.cginc" />
     <Reference Include="UnityEditor.StandardEvents">
       <HintPath>C:/Users/nagau/Desktop/Terrain/Library/ScriptAssemblies/UnityEditor.StandardEvents.dll</HintPath>
     </Reference>

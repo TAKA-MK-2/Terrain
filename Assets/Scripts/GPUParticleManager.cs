@@ -1,33 +1,24 @@
-﻿using System.Collections.Generic;
-using System.Runtime.InteropServices;
-using UnityEngine;
+﻿using UnityEngine;
 using UnityEngine.Assertions;
-using UnityEngine.Rendering;
+using System.Collections.Generic;
+using System.Runtime.InteropServices;
+#if UNITY_EDITOR
+using UnityEditor;
+#endif
 
-// GPUパーティクル
-struct GPUParticle
+// パーティクル
+struct Particle
 {
-    // 識別番号
-    public int index;
-    // 活動状態
-    public bool isActive;
-    // 座標
+    public bool active;
     public Vector3 position;
-    // 速度
     public Vector3 velocity;
-    // 回転
     public Vector3 rotation;
-    // 角速度
     public Vector3 angVelocity;
-    // スケール	
+    public Color color;
     public float scale;
-    // カラー
-    public Vector3 color;
-    // 経過時間
-    public float elapsedTime;
-    // 生存時間
+    public float time;
     public float lifeTime;
-};
+}
 
 public class GPUParticleManager : MonoBehaviour
 {
@@ -35,56 +26,70 @@ public class GPUParticleManager : MonoBehaviour
     const int MAX_NUM_VERTICES = 65534;
     // 最大パーティクル数
     [SerializeField, Tooltip("This cannot be changed while running.")]
-    private int MAX_NUM_PARTICLES;
+    int maxNumParticles;
     // パーティクルのメッシュ
     [SerializeField]
-    private Mesh mesh;
-    // シェーダー
+    Mesh mesh;
+    // パーティクルの描画を行うマテリアルを生成するシェーダー
     [SerializeField]
-    private Shader shader;
-    // コンピュートシェーダー
+    Shader shader;
+    // パーティクルの計算を行うコンピュートシェーダー
     [SerializeField]
-    private ComputeShader computeShader;
-    // パーティクルのテクスチャ
+    ComputeShader computeShader;
+    // パーティクルの移動速度
     [SerializeField]
-    private Texture2D texture;
-    // 速度
+    Vector3 velocity = new Vector3(2f, 5f, 2f);
+    // パーティクルの角速度
     [SerializeField]
-    private Vector3 velocity = new Vector3(2f, 5f, 2f);
-    // 角速度
+    Vector3 angVelocity = new Vector3(45f, 45f, 45f);
+    // エミット範囲
     [SerializeField]
-    private Vector3 angVelocity = new Vector3(45f, 45f, 45f);
-    // 範囲
+    Vector3 range = Vector3.one;
+    // パーティクルのスケール
     [SerializeField]
-    private Vector3 range = Vector3.one;
+    float scale = 0.2f;
+    // パーティクルの生存時間
+    [SerializeField]
+    float lifeTime = 2f;
+    // 一度にエミットするパーティクル数
+    [SerializeField, Range(1, 1000)]
+    int emitGroupNum = 10;
     // 複合メッシュ
     Mesh m_combinedMesh;
-    // コンピュートバッファ
-    ComputeBuffer m_computeBuffer;
-    // 更新処理カーネル
+    // パーティクルバッファ
+    ComputeBuffer m_particlesBuffer;
+    // パーティクルプールのバッファ
+    ComputeBuffer m_particlePoolBuffer;
+    // パーティクル数を取得するバッファ
+    ComputeBuffer m_particleCountBuffer;
+    // パーティクル数
+    int[] m_particleCounts;
+    // 更新カーネル
     int m_updateKernel;
-    // 放出処理カーネル
+    // エミットカーネル
     int m_emitKernel;
     // マテリアル
-    List<Material> m_materials = new List<Material>();
+    Material m_material;
+    // 
+    List<MaterialPropertyBlock> m_propertyBlocks = new List<MaterialPropertyBlock>();
     // 1メッシュ当たりのパーティクル数
-    int numParticlesPerMesh;
-    // メッシュの数
+    int m_numParticlesPerMesh;
+    // メッシュ数
     int m_numMeshs;
 
-    // 複合メッシュの作成
-    Mesh CreateCombinedMesh(Mesh mesh, int num)
+    // 複合メッシュを生成する
+    Mesh CreateCombinedMesh(Mesh mesh, int numParticles)
     {
-        // Meshの合計の頂点数が最大頂点数を超えないようにする
-        Assert.IsTrue(mesh.vertexCount * num <= MAX_NUM_VERTICES);
-        // メッシュ番号
+        // 最大頂点数を超えないようにする
+        Assert.IsTrue(mesh.vertexCount * numParticles <= MAX_NUM_VERTICES);
+        // メッシュのindexバッファを取得する
         int[] meshIndices = mesh.GetIndices(0);
-        // 識別番号の数
-        int numMeshs = meshIndices.Length;
+        // インデックス数
+        int numIndices = meshIndices.Length;
         // 頂点
         List<Vector3> vertices = new List<Vector3>();
-        // 識別番号
-        int[] indices = new int[num * numMeshs];
+        // インデックス
+        int[] indices = new int[numParticles * numIndices];
         // 法線
         List<Vector3> normals = new List<Vector3>();
         // 接線
@@ -92,26 +97,26 @@ public class GPUParticleManager : MonoBehaviour
         // 
         List<Vector2> uv0 = new List<Vector2>();
         List<Vector2> uv1 = new List<Vector2>();
-
-        for (int index = 0; index < num; index++)
+        // 
+        for (int id = 0; id < numParticles; ++id)
         {
-            // 領域を確保する
+            // 
             vertices.AddRange(mesh.vertices);
             normals.AddRange(mesh.normals);
             tangents.AddRange(mesh.tangents);
             uv0.AddRange(mesh.uv);
             // 各メッシュのインデックスは（1 つのモデルの頂点数 * ID）分ずらす
-            for (int n = 0; n < numMeshs; n++)
+            for (int n = 0; n < numIndices; ++n)
             {
-                indices[index * numMeshs + n] = index * mesh.vertexCount + meshIndices[n];
+                indices[id * numIndices + n] = id * mesh.vertexCount + meshIndices[n];
             }
             // 2 番目の UV に ID を格納しておく
             for (int n = 0; n < mesh.uv.Length; ++n)
             {
-                uv1.Add(new Vector2(index, index));
+                uv1.Add(new Vector2(id, id));
             }
         }
-        // 複合メッシュを生成
+        // 複合メッシュ
         Mesh combinedMesh = new Mesh();
         combinedMesh.SetVertices(vertices);
         combinedMesh.SetIndices(indices, MeshTopology.Triangles, 0);
@@ -122,76 +127,164 @@ public class GPUParticleManager : MonoBehaviour
         combinedMesh.SetUVs(1, uv1);
         combinedMesh.RecalculateBounds();
         combinedMesh.bounds.SetMinMax(Vector3.one * -100f, Vector3.one * 100f);
-        // 生成した複合メッシュを返す
         return combinedMesh;
+    }
+
+    // ビュー、射影行列の配列を取得する
+    float[] GetViewProjectionArray()
+    {
+        // メインカメラ
+        Camera camera = Camera.main;
+        // ビュー行列
+        Matrix4x4 view = camera.worldToCameraMatrix;
+        // 射影行列
+        Matrix4x4 proj = GL.GetGPUProjectionMatrix(camera.projectionMatrix, false);
+        // ビュー、射影行列
+        Matrix4x4 vp = proj * view;
+        // ビュー、射影行列を配列にして返す
+        return new float[] 
+        {
+            vp.m00, vp.m10, vp.m20, vp.m30,
+            vp.m01, vp.m11, vp.m21, vp.m31,
+            vp.m02, vp.m12, vp.m22, vp.m32,
+            vp.m03, vp.m13, vp.m23, vp.m33
+        };
+    }
+
+    // パーティクルプールのサイズを取得する
+    int GetParticlePoolSize()
+    {
+        m_particleCountBuffer.SetData(m_particleCounts);
+        ComputeBuffer.CopyCount(m_particlePoolBuffer, m_particleCountBuffer, 0);
+        m_particleCountBuffer.GetData(m_particleCounts);
+        return m_particleCounts[0];
     }
 
     void OnEnable()
     {
-        // 1メッシュ当たりのパーティクル数を計算
-        numParticlesPerMesh = MAX_NUM_VERTICES / mesh.vertexCount;
-        // メッシュ数を計算
-        m_numMeshs = (int)Mathf.Ceil((float)MAX_NUM_PARTICLES / numParticlesPerMesh);
-        // メッシュ数分のマテリアルを生成
+        // メッシュの結合
+        {
+            m_numParticlesPerMesh = MAX_NUM_VERTICES / mesh.vertexCount;
+            m_numMeshs = (int)Mathf.Ceil((float)maxNumParticles / m_numParticlesPerMesh);
+            m_combinedMesh = CreateCombinedMesh(mesh, m_numParticlesPerMesh);
+        }
+        // メッシュの数だけマテリアルを作成
+        m_material = new Material(shader);
         for (int i = 0; i < m_numMeshs; ++i)
         {
-            // シェーダーからマテリアルを生成
-            Material material = new Material(shader);
-            // マテリアルにメッシュのIDを設定
-            material.SetInt("_idOffset", numParticlesPerMesh * i);
-            // マテリアルを追加
-            m_materials.Add(material);
+            MaterialPropertyBlock props = new MaterialPropertyBlock();
+            props.SetFloat("_IdOffset", m_numParticlesPerMesh * i);
+            m_propertyBlocks.Add(props);
         }
-        // 複合メッシュを生成
-        m_combinedMesh = CreateCombinedMesh(mesh, numParticlesPerMesh);
-        // コンピュートバッファを生成
-        m_computeBuffer = new ComputeBuffer(MAX_NUM_PARTICLES, Marshal.SizeOf(typeof(GPUParticle)), ComputeBufferType.Default);
+        // ComputeBufferの初期化
+        {
+            m_particlesBuffer = new ComputeBuffer(maxNumParticles, Marshal.SizeOf(typeof(Particle)), ComputeBufferType.Default);
+            m_particlePoolBuffer = new ComputeBuffer(maxNumParticles, sizeof(int), ComputeBufferType.Append);
+            m_particlePoolBuffer.SetCounterValue(0);
+            m_particleCountBuffer = new ComputeBuffer(4, sizeof(int), ComputeBufferType.IndirectArguments);
+            m_particleCounts = new int[] { 0, 1, 0, 0 };
+        }
         // カーネルの設定
-        var initKernel = computeShader.FindKernel("Initialize");
         m_updateKernel = computeShader.FindKernel("Update");
         m_emitKernel = computeShader.FindKernel("Emit");
-        // バッファを設定
-        computeShader.SetBuffer(initKernel, "_particles", m_computeBuffer);
-        // 変数を設定
-        computeShader.SetVector("_range", range);
-        computeShader.SetVector("_velocity", velocity);
-        computeShader.SetVector("_angVelocity", angVelocity * Mathf.Deg2Rad);
-        // コンピュートシェーダーの実行
-        computeShader.Dispatch(initKernel, (int)Mathf.Ceil((float)MAX_NUM_PARTICLES / 1024), 1, 1);
-    }
-
-    void Update()
-    {
-        // 変数を設定
-        computeShader.SetVector("_velocity", velocity);
-        computeShader.SetVector("_angVelocity", angVelocity * Mathf.Deg2Rad);
-        computeShader.SetVector("_range", range);
-        // バッファを設定
-        computeShader.SetBuffer(m_emitKernel, "_particles", m_computeBuffer);
-        // コンピュートシェーダーを実行
-        computeShader.Dispatch(m_emitKernel, (int)Mathf.Ceil((float)MAX_NUM_PARTICLES / 1024), 1, 1);
-        // 変数を設定
-        computeShader.SetFloat("_deltaTime", Time.deltaTime);
-        // バッファを設定
-        computeShader.SetBuffer(m_updateKernel, "_particles", m_computeBuffer);
-        // コンピュートシェーダーを実行
-        computeShader.Dispatch(m_updateKernel, (int)Mathf.Ceil((float)MAX_NUM_PARTICLES / 1024), 1, 1);
-        // メッシュの描画
-        for (int i = 0; i < m_numMeshs; ++i)
-        {
-            // 描画するマテリアルを取り出す
-            Material material = m_materials[i];
-            // 変数を設定
-            material.SetInt("_idOffset", numParticlesPerMesh * i);
-            material.SetBuffer("_particles", m_computeBuffer);
-            // 描画する
-            Graphics.DrawMesh(m_combinedMesh, transform.position, transform.rotation, material, 0, Camera.main);
-        }
+        // 初期化カーネルを実行
+        DispatchInit();
     }
 
     void OnDisable()
     {
-        // コンピュートバッファの開放    
-        m_computeBuffer.Release();
+        // バッファを開放する
+        m_particlesBuffer.Release();
+        m_particlePoolBuffer.Release();
+        m_particleCountBuffer.Release();
+    }
+
+    void Update()
+    {
+        //if (Input.GetMouseButton(0))
+        //{
+        //    RaycastHit hit;
+        //    var ray = Camera.main.ScreenPointToRay(Input.mousePosition);
+        //    if (Physics.Raycast(ray, out hit))
+        //    {
+        //        var toNormal = Quaternion.FromToRotation(Vector3.up, hit.normal);
+        //        computeShader.SetVector("_Position", hit.point + hit.normal * 0.1f);
+        //        computeShader.SetVector("_Velocity", toNormal * velocity);
+        //        DispatchEmit(emitGroupNum);
+        //    }
+        //}
+        // エミットカーネルを実行
+        if (Input.GetKey(KeyCode.Space))
+        {
+            computeShader.SetVector("_Position", transform.position);
+            computeShader.SetVector("_Velocity", velocity);
+            DispatchEmit(emitGroupNum);
+        }
+        // 更新カーネルを実行
+        DispatchUpdate();
+        // 描画処理
+        RegisterDraw(Camera.main);
+#if UNITY_EDITOR
+        if (SceneView.lastActiveSceneView)
+        {
+            RegisterDraw(SceneView.lastActiveSceneView.camera);
+        }
+#endif
+    }
+
+    // 初期化カーネルを実行
+    void DispatchInit()
+    {
+        int initKernel = computeShader.FindKernel("Init");
+        computeShader.SetBuffer(initKernel, "_Particles", m_particlesBuffer);
+        computeShader.SetBuffer(initKernel, "_DeadList", m_particlePoolBuffer);
+        computeShader.Dispatch(initKernel, maxNumParticles / 100, 1, 1);
+    }
+
+    // エミットカーネルを実行
+    void DispatchEmit(int groupNum)
+    {
+        Camera camera = Camera.main;
+        computeShader.SetBuffer(m_emitKernel, "_Particles", m_particlesBuffer);
+        computeShader.SetBuffer(m_emitKernel, "_ParticlePool", m_particlePoolBuffer);
+        computeShader.SetVector("_AngVelocity", angVelocity * Mathf.Deg2Rad);
+        computeShader.SetVector("_Range", range);
+        computeShader.SetFloat("_Scale", scale);
+        computeShader.SetFloat("_DeltaTime", Time.deltaTime);
+        computeShader.SetFloat("_ScreenWidth", camera.pixelWidth);
+        computeShader.SetFloat("_ScreenHeight", camera.pixelHeight);
+        computeShader.SetFloat("_LifeTime", lifeTime);
+        computeShader.Dispatch(m_emitKernel, Mathf.Min(groupNum, GetParticlePoolSize() / 100), 1, 1);
+    }
+
+    // 更新カーネルを実行
+    void DispatchUpdate()
+    {
+        ComputeBuffer buffer = new ComputeBuffer(maxNumParticles, sizeof(int));
+        computeShader.SetBuffer(m_updateKernel, "_debug", buffer);
+        computeShader.SetFloats("_ViewProj", GetViewProjectionArray());
+        computeShader.SetTexture(m_updateKernel, "_CameraDepthTexture", GBufferUtils.GetDepthTexture());
+        computeShader.SetTexture(m_updateKernel, "_CameraGBufferTexture2", GBufferUtils.GetGBufferTexture(2));
+        computeShader.SetBuffer(m_updateKernel, "_Particles", m_particlesBuffer);
+        computeShader.SetBuffer(m_updateKernel, "_DeadList", m_particlePoolBuffer);
+        computeShader.Dispatch(m_updateKernel, maxNumParticles / 100, 1, 1);
+        int[] vs = new int[maxNumParticles];
+        buffer.GetData(vs);
+        foreach (var item in vs)
+        {
+            Debug.Log(item);
+        }
+    }
+
+    // 描画処理
+    void RegisterDraw(Camera camera)
+    {
+        m_material.SetBuffer("_Particles", m_particlesBuffer);
+        for (int i = 0; i < m_numMeshs; ++i)
+        {
+            var props = m_propertyBlocks[i];
+            props.SetFloat("_IdOffset", m_numParticlesPerMesh * i);
+            Graphics.DrawMesh(m_combinedMesh, transform.position, transform.rotation, m_material, 0, camera, 0, props);
+        }
     }
 }
