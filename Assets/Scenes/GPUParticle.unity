@@ -140,7 +140,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 6ba1b2c5045576042aee1e132e74e746, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  maxParticleNum: 100
+  maxNumParticles: 15000
   mesh: {fileID: 10210, guid: 0000000000000000e000000000000000, type: 0}
   shader: {fileID: 4800000, guid: e64ef8d4171c0cd499a110357f4ee4b2, type: 3}
   computeShader: {fileID: 7200000, guid: ecc99b2bdb9ed5140ac814d41e51d0fb, type: 3}
@@ -148,8 +148,8 @@ MonoBehaviour:
   angVelocity: {x: 45, y: 45, z: 45}
   range: {x: 2, y: 2, z: 2}
   scale: 1
-  lifeTime: 10
-  emitGroupNum: 1
+  lifeTime: 1
+  numEmitParticles: 273
 --- !u!4 &16672292
 Transform:
   m_ObjectHideFlags: 0

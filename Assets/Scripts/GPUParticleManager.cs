@@ -7,21 +7,32 @@ using UnityEditor;
 #endif
 
 // パーティクル
-struct Particle
+struct GPUParticle
 {
-    public bool active;
+    // アクティブ状態
+    public bool isActive;
+    // 座標
     public Vector3 position;
+    // 速度
     public Vector3 velocity;
+    // 回転
     public Vector3 rotation;
+    // 角速度
     public Vector3 angVelocity;
+    // 色
     public Color color;
+    // スケール
     public float scale;
-    public float time;
+    // 経過時間
+    public float elapsedTime;
+    // 生存時間
     public float lifeTime;
 }
 
 public class GPUParticleManager : MonoBehaviour
 {
+    // スレッド数
+    const int NUM_THREAD = 1;
     // 最大頂点数
     const int MAX_NUM_VERTICES = 65534;
     // 最大パーティクル数
@@ -52,8 +63,8 @@ public class GPUParticleManager : MonoBehaviour
     [SerializeField]
     float lifeTime = 2f;
     // 一度にエミットするパーティクル数
-    [SerializeField, Range(1, 1000)]
-    int emitGroupNum = 10;
+    [SerializeField, Range(1, 10000)]
+    int numEmitParticles = 10;
     // 複合メッシュ
     Mesh m_combinedMesh;
     // パーティクルバッファ
@@ -70,7 +81,7 @@ public class GPUParticleManager : MonoBehaviour
     int m_emitKernel;
     // マテリアル
     Material m_material;
-    // 
+    // マテリアル情報を適用するブロック要素
     List<MaterialPropertyBlock> m_propertyBlocks = new List<MaterialPropertyBlock>();
     // 1メッシュ当たりのパーティクル数
     int m_numParticlesPerMesh;
@@ -178,7 +189,7 @@ public class GPUParticleManager : MonoBehaviour
         }
         // ComputeBufferの初期化
         {
-            m_particlesBuffer = new ComputeBuffer(maxNumParticles, Marshal.SizeOf(typeof(Particle)), ComputeBufferType.Default);
+            m_particlesBuffer = new ComputeBuffer(maxNumParticles, Marshal.SizeOf(typeof(GPUParticle)), ComputeBufferType.Default);
             m_particlePoolBuffer = new ComputeBuffer(maxNumParticles, sizeof(int), ComputeBufferType.Append);
             m_particlePoolBuffer.SetCounterValue(0);
             m_particleCountBuffer = new ComputeBuffer(4, sizeof(int), ComputeBufferType.IndirectArguments);
@@ -216,9 +227,9 @@ public class GPUParticleManager : MonoBehaviour
         // エミットカーネルを実行
         if (Input.GetKey(KeyCode.Space))
         {
-            computeShader.SetVector("_Position", transform.position);
-            computeShader.SetVector("_Velocity", velocity);
-            DispatchEmit(emitGroupNum);
+            computeShader.SetVector("_position", transform.position);
+            computeShader.SetVector("_velocity", velocity);
+            DispatchEmit(numEmitParticles);
         }
         // 更新カーネルを実行
         DispatchUpdate();
@@ -236,50 +247,48 @@ public class GPUParticleManager : MonoBehaviour
     void DispatchInit()
     {
         int initKernel = computeShader.FindKernel("Init");
-        computeShader.SetBuffer(initKernel, "_Particles", m_particlesBuffer);
-        computeShader.SetBuffer(initKernel, "_DeadList", m_particlePoolBuffer);
-        computeShader.Dispatch(initKernel, maxNumParticles / 100, 1, 1);
+        computeShader.SetBuffer(initKernel, "_particles", m_particlesBuffer);
+        computeShader.SetBuffer(initKernel, "_deadList", m_particlePoolBuffer);
+        computeShader.Dispatch(initKernel, maxNumParticles, 1, 1);
     }
 
     // エミットカーネルを実行
     void DispatchEmit(int groupNum)
     {
+        if (GetParticlePoolSize() / NUM_THREAD <= 0)
+        {
+            return;
+        }
         Camera camera = Camera.main;
-        computeShader.SetBuffer(m_emitKernel, "_Particles", m_particlesBuffer);
-        computeShader.SetBuffer(m_emitKernel, "_ParticlePool", m_particlePoolBuffer);
-        computeShader.SetVector("_AngVelocity", angVelocity * Mathf.Deg2Rad);
-        computeShader.SetVector("_Range", range);
-        computeShader.SetFloat("_Scale", scale);
-        computeShader.SetFloat("_DeltaTime", Time.deltaTime);
-        computeShader.SetFloat("_ScreenWidth", camera.pixelWidth);
-        computeShader.SetFloat("_ScreenHeight", camera.pixelHeight);
-        computeShader.SetFloat("_LifeTime", lifeTime);
-        computeShader.Dispatch(m_emitKernel, Mathf.Min(groupNum, GetParticlePoolSize() / 100), 1, 1);
+        computeShader.SetBuffer(m_emitKernel, "_particles", m_particlesBuffer);
+        computeShader.SetBuffer(m_emitKernel, "_particlePool", m_particlePoolBuffer);
+        computeShader.SetVector("_angVelocity", angVelocity * Mathf.Deg2Rad);
+        computeShader.SetVector("_range", range);
+        computeShader.SetFloat("_scale", scale);
+        computeShader.SetFloat("_deltaTime", Time.deltaTime);
+        computeShader.SetFloat("_screenWidth", camera.pixelWidth);
+        computeShader.SetFloat("_screenHeight", camera.pixelHeight);
+        computeShader.SetFloat("_lifeTime", lifeTime);
+        computeShader.Dispatch(m_emitKernel, Mathf.Min(groupNum, GetParticlePoolSize() / NUM_THREAD), 1, 1);
     }
 
     // 更新カーネルを実行
     void DispatchUpdate()
     {
-        ComputeBuffer buffer = new ComputeBuffer(maxNumParticles, sizeof(int));
-        computeShader.SetBuffer(m_updateKernel, "_debug", buffer);
-        computeShader.SetFloats("_ViewProj", GetViewProjectionArray());
-        computeShader.SetTexture(m_updateKernel, "_CameraDepthTexture", GBufferUtils.GetDepthTexture());
-        computeShader.SetTexture(m_updateKernel, "_CameraGBufferTexture2", GBufferUtils.GetGBufferTexture(2));
-        computeShader.SetBuffer(m_updateKernel, "_Particles", m_particlesBuffer);
-        computeShader.SetBuffer(m_updateKernel, "_DeadList", m_particlePoolBuffer);
-        computeShader.Dispatch(m_updateKernel, maxNumParticles / 100, 1, 1);
-        int[] vs = new int[maxNumParticles];
-        buffer.GetData(vs);
-        foreach (var item in vs)
-        {
-            Debug.Log(item);
-        }
+        computeShader.SetFloat("_deltaTime", Time.deltaTime);
+        computeShader.SetFloats("_viewProj", GetViewProjectionArray());
+        computeShader.SetTexture(m_updateKernel, "_cameraDepthTexture", GBufferUtils.GetDepthTexture());
+        computeShader.SetTexture(m_updateKernel, "_cameraGBufferTexture2", GBufferUtils.GetGBufferTexture(2));
+        computeShader.SetBuffer(m_updateKernel, "_particles", m_particlesBuffer);
+        computeShader.SetBuffer(m_updateKernel, "_deadList", m_particlePoolBuffer);
+        computeShader.Dispatch(m_updateKernel, maxNumParticles, 1, 1);
+
     }
 
     // 描画処理
     void RegisterDraw(Camera camera)
     {
-        m_material.SetBuffer("_Particles", m_particlesBuffer);
+        m_material.SetBuffer("_particles", m_particlesBuffer);
         for (int i = 0; i < m_numMeshs; ++i)
         {
             var props = m_propertyBlocks[i];

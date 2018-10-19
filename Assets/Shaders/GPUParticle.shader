@@ -3,52 +3,67 @@
 
 	SubShader
 	{
-
+	// ライティングパイプライン
 	Tags { "RenderType" = "Opaque" }
-
+	// 共通設定
 	CGINCLUDE
-
+	// ファイルの読み込み
 	#include "UnityCG.cginc"
 	#include "UnityStandardShadow.cginc"
-
-	struct Particle
+	// パーティクル
+	struct GPUParticle
 	{
-		bool active;
+		// アクティブ状態
+		bool isActive;
+		// 座標
 		float3 position;
+		// 速度
 		float3 velocity;
+		// 回転
 		float3 rotation;
+		// 角速度
 		float3 angVelocity;
+		// 色
 		float4 color;
+		// スケール
 		float scale;
-		float time;
+		// 経過時間
+		float elapsedTime;
+		// 生存時間
 		float lifeTime;
 	};
 
-	#ifdef SHADER_API_D3D11
-	StructuredBuffer<Particle> _Particles;
-	#endif
-	float _IdOffset;
+#ifdef SHADER_API_D3D11
+	// パーティクルバッファ
+	StructuredBuffer<GPUParticle> _particles;
+#endif
+	// 
+	float _idOffset;
 
-	struct appdata
+	// 頂点シェーダーへの入力
+	struct Appdata
 	{
 		float4 vertex : POSITION;
 		float3 normal : NORMAL;
 		float2 uv1 : TEXCOORD1;
 	};
 
-	struct v2f
+	// 頂点シェーダーからフラグメントシェーダーへの出力
+	struct V2F
 	{
 		float4 position : SV_POSITION;
 		float3 normal : NORMAL;
 		float2 uv1 : TEXCOORD1;
 	};
 
-	struct v2f_shadow
+	// ShadowCaster用v2f
+	struct V2F_shadow
 	{
 		V2F_SHADOW_CASTER;
 	};
 
-	struct gbuffer_out
+	// フラグメントシェーダーからのGBuffer出力
+	struct GBuffer_out
 	{
 		float4 diffuse  : SV_Target0; // rgb: diffuse,  a: occlusion
 		float4 specular : SV_Target1; // rgb: specular, a: smoothness
@@ -57,9 +72,10 @@
 		float  depth : SV_Depth;
 	};
 
-	inline int getId(float2 uv1)
+	// パーティクルのIDを取得する
+	inline int GetId(float2 uv1)
 	{
-		return (int)(uv1.x + 0.5) + (int)_IdOffset;
+		return (int)(uv1.x + 0.5) + (int)_idOffset;
 	}
 
 	float3 rotate(float3 p, float3 rotation)
@@ -84,25 +100,31 @@
 		return mul(m, p);
 	}
 
-	v2f vert(appdata v)
+	// 頂点シェーダー 
+	V2F vert(Appdata v)
 	{
 	#ifdef SHADER_API_D3D11
-		Particle p = _Particles[getId(v.uv1)];
+		// パーティクルを取り出す
+		GPUParticle p = _particles[GetId(v.uv1)];
+		// 頂点を設定
 		v.vertex.xyz *= p.scale;
 		v.vertex.xyz = rotate(v.vertex.xyz, p.rotation);
 		v.vertex.xyz += p.position;
 		v.normal = rotate(v.normal, p.rotation);
 	#endif
-		v2f o;
+		// フラグメントシェーダーへの出力
+		V2F o;
 		o.uv1 = v.uv1;
 		o.position = mul(UNITY_MATRIX_VP, v.vertex);
 		o.normal = v.normal;
 		return o;
 	}
 
-	gbuffer_out frag(v2f i) : SV_Target
+	// フラグメントシェーダー
+	GBuffer_out frag(V2F i) : SV_Target
 	{
-		gbuffer_out o;
+		// GBufferへの出力
+		GBuffer_out o;
 		o.diffuse = 0;
 		o.normal = float4(0.5 * i.normal + 0.5, 1);
 		o.emission = o.diffuse * 0.1;
@@ -110,29 +132,35 @@
 		o.depth = i.position;
 
 	#ifdef SHADER_API_D3D11
-		Particle p;
-		p = _Particles[getId(i.uv1)];
+		// 色を変更
+		GPUParticle p;
+		p = _particles[GetId(i.uv1)];
 		o.diffuse = p.color;
 	#endif
 
 		return o;
 	}
 
-	v2f_shadow vert_shadow(appdata v)
+	// ShadowCaster時の頂点シェーダー
+	V2F_shadow vert_shadow(Appdata v)
 	{
 	#ifdef SHADER_API_D3D11
-		Particle p = _Particles[getId(v.uv1)];
+		// パーティクルを取り出す
+		GPUParticle p = _particles[GetId(v.uv1)];
+		// 頂点を設定
 		v.vertex.xyz = rotate(v.vertex.xyz, p.rotation);
 		v.vertex.xyz *= p.scale;
 		v.vertex.xyz += p.position;
 	#endif
-		v2f_shadow o;
+		// ShadowCaster用にv2fを変換
+		V2F_shadow o;
 		TRANSFER_SHADOW_CASTER_NORMALOFFSET(o)
 		o.pos = mul(UNITY_MATRIX_VP, v.vertex);
 		return o;
 	}
 
-	float4 frag_shadow(v2f_shadow i) : SV_Target
+	// ShadowCaster時のフラグメントシェーダー
+	float4 frag_shadow(V2F_shadow i) : SV_Target
 	{
 		SHADOW_CASTER_FRAGMENT(i)
 	}

@@ -67,10 +67,13 @@
     <Compile Include="Assets\Scripts\GPUParticleManager.cs" />
     <Compile Include="Assets\Scripts\KernelExample.cs" />
     <Compile Include="Assets\Scripts\PlayerController.cs" />
+    <None Include="Assets\Shaders\GPUParticleCommon.cginc" />
+    <None Include="Assets\Shaders\Libs\ColorUtil.cginc" />
     <None Include="Assets\ComputeShaders\Sample.compute" />
     <None Include="Assets\Shaders\GBufferCopy.shader" />
     <None Include="Assets\Shaders\GPUParticle.shader" />
     <None Include="Assets\ComputeShaders\CalculateTerrain.compute" />
+    <None Include="Assets\Shaders\Libs\Quaternion.cginc" />
     <None Include="Assets\ComputeShaders\GPUParticle.compute" />
     <Reference Include="UnityEditor.StandardEvents">
       <HintPath>C:/Users/nagau/Desktop/Terrain/Library/ScriptAssemblies/UnityEditor.StandardEvents.dll</HintPath>
