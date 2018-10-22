@@ -212,25 +212,9 @@ public class GPUParticleManager : MonoBehaviour
 
     void Update()
     {
-        //if (Input.GetMouseButton(0))
-        //{
-        //    RaycastHit hit;
-        //    var ray = Camera.main.ScreenPointToRay(Input.mousePosition);
-        //    if (Physics.Raycast(ray, out hit))
-        //    {
-        //        var toNormal = Quaternion.FromToRotation(Vector3.up, hit.normal);
-        //        computeShader.SetVector("_Position", hit.point + hit.normal * 0.1f);
-        //        computeShader.SetVector("_Velocity", toNormal * velocity);
-        //        DispatchEmit(emitGroupNum);
-        //    }
-        //}
-        // エミットカーネルを実行
-        if (Input.GetKey(KeyCode.Space))
-        {
-            computeShader.SetVector("_position", transform.position);
-            computeShader.SetVector("_velocity", velocity);
-            DispatchEmit(numEmitParticles);
-        }
+        computeShader.SetVector("_position", transform.position);
+        computeShader.SetVector("_velocity", velocity);
+        DispatchEmit(numEmitParticles);
         // 更新カーネルを実行
         DispatchUpdate();
         // 描画処理

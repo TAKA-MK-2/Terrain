@@ -44,6 +44,7 @@
 	struct Appdata
 	{
 		float4 vertex : POSITION;
+		float4 color : COLOR;
 		float3 normal : NORMAL;
 		float2 uv1 : TEXCOORD1;
 	};
@@ -141,6 +142,52 @@
 		return o;
 	}
 
+	// ジオメトリシェーダ
+	[maxvertexcount(4)]
+	void geom(point Appdata input[1], inout TriangleStream<Appdata> outStream)
+	{
+		Appdata output;
+
+		// 全ての頂点で共通の値を計算しておく
+		float4 pos = input[0].vertex;
+		float3 normal = input[0].normal;
+		float4 col = input[0].color;
+
+		// 四角形になるように頂点を生産
+		for (int x = 0; x < 2; x++)
+		{
+			for (int y = 0; y < 2; y++)
+			{
+				// ビルボード用の行列
+				float4x4 billboardMatrix = UNITY_MATRIX_V;
+				billboardMatrix._m03 = 0;
+				billboardMatrix._m13 = 0;
+				billboardMatrix._m23 = 0;
+				billboardMatrix._m33 = 0;
+
+				// テクスチャ座標
+				float2 tex = float2(x, y);
+				output.uv1 = tex;
+
+				// 頂点位置を計算
+				output.vertex = pos + mul(float4((tex * 2 - float2(1, 1)) * 0.2, 0, 1), billboardMatrix);
+				output.vertex = mul(UNITY_MATRIX_VP, output.vertex);
+
+				// 色
+				output.color = col;
+
+				// 法線
+				output.normal = normal;
+
+				// ストリームに頂点を追加
+				outStream.Append(output);
+			}
+		}
+
+		// トライアングルストリップを終了
+		outStream.RestartStrip();
+	}
+
 	// ShadowCaster時の頂点シェーダー
 	V2F_shadow vert_shadow(Appdata v)
 	{
@@ -176,6 +223,7 @@
 		#pragma target 3.0
 		#pragma vertex vert 
 		#pragma fragment frag 
+		#pragma geometry geom
 		ENDCG
 	}
 
@@ -192,6 +240,7 @@
 		#pragma target 3.0
 		#pragma vertex vert_shadow
 		#pragma fragment frag_shadow
+		#pragma geometry geom
 		#pragma multi_compile_shadowcaster
 		#pragma fragmentoption ARB_precision_hint_fastest
 		ENDCG
