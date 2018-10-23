@@ -274,6 +274,7 @@ public class GPUParticleRenderer : MonoBehaviour
         material.SetBuffer("_Particles", particleBuffer);
         material.SetBuffer("_ParticleActiveList", activeIndexBuffer);
 
+        material.SetVector("_upVec", Vector3.up);
         material.SetPass(0);
     }
 

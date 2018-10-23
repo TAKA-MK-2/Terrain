@@ -61,17 +61,14 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Assets\Scripts\CameraRotate.cs" />
     <Compile Include="Assets\Scripts\FPSCounter.cs" />
-    <Compile Include="Assets\Scripts\GBufferUtils.cs" />
     <Compile Include="Assets\Scripts\GenerateTerrain.cs" />
     <Compile Include="Assets\Scripts\GPUParticleManager.cs" />
     <Compile Include="Assets\Scripts\GPUParticleRenderer.cs" />
-    <Compile Include="Assets\Scripts\KernelExample.cs" />
-    <Compile Include="Assets\Scripts\PlayerController.cs" />
     <Compile Include="Assets\Scripts\ShaderDefines.cs" />
     <None Include="Assets\Shaders\GPUParticleCommon.cginc" />
     <None Include="Assets\Shaders\Libs\ColorUtil.cginc" />
-    <None Include="Assets\Shaders\GBufferCopy.shader" />
     <None Include="Assets\ComputeShaders\GPUParticleCulling.compute" />
     <None Include="Assets\Shaders\GPUParticle.shader" />
     <None Include="Assets\ComputeShaders\CalculateTerrain.compute" />

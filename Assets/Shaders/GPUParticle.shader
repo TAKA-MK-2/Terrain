@@ -49,6 +49,8 @@
 	float4 _MainTex_ST;
 	float4 _RotationOffsetAxis;
 
+	float3 _upVec;
+
 	v2f vert(uint vid : SV_VertexID, uint iid : SV_InstanceID)
 	{
 		uint idx = _indices[vid];
@@ -68,8 +70,18 @@
 		pos.xyz = rotateWithQuaternion(pos.xyz, rotation);
 		pos.xyz += _Particles[iidx].position;
 
+		float3 diff = _upVec * _Particles[iidx].scale;
+		float3 finalPosition;
+		float3 tv0 = pos;
+		{
+			float3 eyeVector = ObjSpaceViewDir(float4(tv0, 0));
+			float3 sideVector = normalize(cross(eyeVector, diff));
+			tv0 += (uv.x - 0.5f) * sideVector * _Particles[iidx].scale;
+			tv0 += (uv.y - 0.5f) * diff;
+			finalPosition = tv0;
+		}
 		v2f o;
-		o.pos = mul(UNITY_MATRIX_VP, pos);
+		o.pos = mul(UNITY_MATRIX_P, mul(UNITY_MATRIX_MV, pos) + float4(pos.x, pos.y, 0, 0));
 		o.uv = uv;
 		//o.normal = normal;
 		//o.tangent = tangent;
@@ -84,7 +96,7 @@
 	fixed4  frag(v2f i) : SV_Target
 	{
 
-		fixed4 col = tex2D(_MainTex, i.uv) * i.color;
+		fixed4 col = tex2D(_MainTex, i.uv);
 
 		return col;
 	}
@@ -92,14 +104,14 @@
 
 		SubShader
 	{
-		Tags{ "RenderType" = "Opaque" }
-			//Tags{ "RenderType" = "Transparent" "IgnoreProjector" = "True" "RenderType" = "Transparent" }
+		//Tags{ "RenderType" = "Opaque" }
+			Tags{ "RenderType" = "Transparent" "IgnoreProjector" = "True" "RenderType" = "Transparent" }
 			LOD 100
 
 			Pass
 		{
 			Name "DEFERRED"
-			//Blend SrcAlpha OneMinusSrcAlpha
+			Blend SrcAlpha OneMinusSrcAlpha
 
 			//Cull Off
 			//Cull Back
@@ -112,9 +124,9 @@
 			Ref 128
 			}*/
 
-			//ZWrite Off
+			ZWrite Off
 			//Blend One One
-			//Cull Off
+			Cull Off
 
 			CGPROGRAM
 #pragma vertex vert

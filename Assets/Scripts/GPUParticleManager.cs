@@ -250,7 +250,10 @@ public class GPUParticleManager : MonoBehaviour
 
     void Update()
     {
-        EmitParticle(transform.position);
+        if (Input.GetMouseButtonDown(0))
+        {
+            EmitParticle(transform.position);
+        }
         UpdateParticle();
     }
 
