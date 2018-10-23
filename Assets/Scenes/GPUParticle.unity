@@ -38,7 +38,7 @@ RenderSettings:
   m_ReflectionIntensity: 1
   m_CustomReflection: {fileID: 0}
   m_Sun: {fileID: 0}
-  m_IndirectSpecularColor: {r: 0.43667546, g: 0.48427135, b: 0.5645225, a: 1}
+  m_IndirectSpecularColor: {r: 0.4366757, g: 0.48427194, b: 0.5645252, a: 1}
   m_UseRadianceAmbientProbe: 0
 --- !u!157 &3
 LightmapSettings:
@@ -122,6 +122,7 @@ GameObject:
   m_Component:
   - component: {fileID: 16672292}
   - component: {fileID: 16672291}
+  - component: {fileID: 16672293}
   m_Layer: 0
   m_Name: GPUParicleSystem
   m_TagString: Untagged
@@ -140,16 +141,17 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 6ba1b2c5045576042aee1e132e74e746, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  maxNumParticles: 15000
-  mesh: {fileID: 10210, guid: 0000000000000000e000000000000000, type: 0}
-  shader: {fileID: 4800000, guid: e64ef8d4171c0cd499a110357f4ee4b2, type: 3}
+  numMaxParticles: 1000000
+  numMaxEmitParticles: 10000
   computeShader: {fileID: 7200000, guid: ecc99b2bdb9ed5140ac814d41e51d0fb, type: 3}
-  velocity: {x: 5, y: 10, z: 5}
-  angVelocity: {x: 45, y: 45, z: 45}
-  range: {x: 2, y: 2, z: 2}
-  scale: 1
-  lifeTime: 1
-  numEmitParticles: 273
+  velocityMax: 5
+  lifeTime: 1.5
+  scaleMin: 0.5
+  scaleMax: 1
+  gravity: 0
+  sai: 1
+  val: 1
+  camera: {fileID: 431218492}
 --- !u!4 &16672292
 Transform:
   m_ObjectHideFlags: 0
@@ -163,6 +165,25 @@ Transform:
   m_Father: {fileID: 0}
   m_RootOrder: 2
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &16672293
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInternal: {fileID: 0}
+  m_GameObject: {fileID: 16672290}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 636201791b9913c479f4116b5385b846, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  material: {fileID: 2100000, guid: a07494843f0d28a4b882cfc59b0082ed, type: 2}
+  cullingCS: {fileID: 7200000, guid: 2fc1eb244aa41e7468df95446d9fe3e0, type: 3}
+  isCulling: 1
+  scale: 1
+  mesh: {fileID: 10210, guid: 0000000000000000e000000000000000, type: 0}
+  rotationOffsetAxis: {x: 1, y: 0, z: 0}
+  rotationOffsetAngle: 0
+  rotateOffset: {x: 0, y: 0, z: 0, w: 0}
 --- !u!1 &431218490
 GameObject:
   m_ObjectHideFlags: 0
@@ -173,7 +194,6 @@ GameObject:
   - component: {fileID: 431218493}
   - component: {fileID: 431218492}
   - component: {fileID: 431218491}
-  - component: {fileID: 431218494}
   m_Layer: 0
   m_Name: Main Camera
   m_TagString: MainCamera
@@ -235,24 +255,12 @@ Transform:
   m_PrefabInternal: {fileID: 0}
   m_GameObject: {fileID: 431218490}
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 1, z: -10}
+  m_LocalPosition: {x: 0, y: 0, z: -10}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_Children: []
   m_Father: {fileID: 0}
   m_RootOrder: 0
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &431218494
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInternal: {fileID: 0}
-  m_GameObject: {fileID: 431218490}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 2a9c60e544eedb94c854231b0d56f0c3, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  gbufferCopyShader: {fileID: 4800000, guid: aa91baf3f1eb4e043aed84fbd2d561e5, type: 3}
 --- !u!1 &726067557
 GameObject:
   m_ObjectHideFlags: 0
@@ -329,7 +337,7 @@ GameObject:
   - component: {fileID: 965024383}
   - component: {fileID: 965024382}
   m_Layer: 0
-  m_Name: GameObject
+  m_Name: FPS Counter
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
