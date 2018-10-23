@@ -1,6 +1,9 @@
 ﻿// Each #kernel tells which function to compile; you can have many kernels
+// 初期化
 #pragma kernel Init
+// エミット
 #pragma kernel Emit
+// 更新
 #pragma kernel Update
 
 #define THREAD_NUM_X 1024

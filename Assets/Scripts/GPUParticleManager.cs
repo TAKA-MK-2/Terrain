@@ -6,12 +6,20 @@ using Utility;
 
 public struct GPUParticleData
 {
-    public bool isActive;       // 有効フラグ
-    public Vector3 position;    // 座標
-    public Vector3 velocity;    // 加速度
-    public Color color;         // 色
-    public float duration;      // 生存時間
-    public float scale;         // サイズ
+    // アクティブか判断する
+    public bool isActive;
+    // 座標
+    public Vector3 position;
+    // 速度
+    public Vector3 velocity;
+    // サイズ
+    public float scale;
+    // 色
+    public Color color;
+    // 生存時間
+    public float lifeTime;
+    // 経過時間
+    public float elapsedTime;
 }
 
 public class GPUParticleManager : MonoBehaviour
@@ -30,7 +38,9 @@ public class GPUParticleManager : MonoBehaviour
     public int numMaxEmitParticles = 8;
     // コンピュートシェーダー
     public ComputeShader computeShader;
-    //public Material material;
+    // エミッターの範囲
+    public Vector3 range = Vector3.one;
+
     public float velocityMax = 1000f;
     public float lifeTime = 1;
     public float scaleMin = 1;
