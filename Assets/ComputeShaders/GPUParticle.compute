@@ -6,24 +6,32 @@
 // 更新
 #pragma kernel Update
 
-#define THREAD_NUM_X 1024
+#define THREAD_NUM_X 32
 
-struct ParticleData
+struct GPUParticleData
 {
-	bool isActive;      // 有効フラグ
-	float3 position;    // 座標
-	float3 velocity;    // 加速度
-	float4 color;       // 色
-	float duration;     // 生存時間
-	float scale;        // サイズ
+	// アクティブか判断する
+	bool isActive;
+	// 座標
+	float3 position;
+	// 速度
+	float3 velocity;
+	// サイズ
+	float scale;
+	// 生存時間
+	float lifeTime;
+	// 経過時間
+	float elapsedTime;
 };
 
 // 乱数生成
-inline float rnd(float2 p) {
+inline float rnd(float2 p)
+{
 	return frac(sin(dot(p, float2(12.9898, 78.233))) * 43758.5453);
 }
 
-inline float3 rnd3(float2 p) {
+inline float3 rnd3(float2 p) 
+{
 	return 2.0 * (float3(rnd(p * 1), rnd(p * 2), rnd(p * 3)) - 0.5);
 }
 
@@ -34,13 +42,13 @@ float3 hsv_to_rgb(float3 HSV)
 	return HSV.z * lerp(k.xxx, clamp(p - k.xxx, 0.0, 1.0), HSV.y);
 }
 
-RWStructuredBuffer<ParticleData> _particles;
+RWStructuredBuffer<GPUParticleData> _particles;
 AppendStructuredBuffer<uint> _deadList;
 ConsumeStructuredBuffer<uint> _particlePool;
 AppendStructuredBuffer<uint> _activeList;
 
 float3 _emitPosition;
-float _velocityMax;
+float3 _velocity;
 float _deltaTime;
 float _elapsedTime;
 float _lifeTime;
@@ -49,6 +57,7 @@ float _scaleMax;
 float _gravity;
 float _sai;
 float _val;
+float3 _range;
 
 [numthreads(THREAD_NUM_X, 1, 1)]
 void Init(uint3 id : SV_DispatchThreadID)
@@ -63,18 +72,17 @@ void Init(uint3 id : SV_DispatchThreadID)
 void Emit()
 {
 	uint no = _particlePool.Consume();
-
-	float2 seed = float2(no + _elapsedTime, no + 1.583 + _elapsedTime);
-	float speed = rnd(seed) * _velocityMax;
+	float2 seed = float2(no + 1 + _elapsedTime, no + 2 + _elapsedTime);
+	float3 position = rnd3(seed);
+	float3 velocity = rnd3(seed + 1);
 	float scale = (rnd(seed + 3) - 0.5) * 2.0 * (_scaleMax - _scaleMin) + _scaleMin;
-	float h = rnd(seed + 5);	// color
 
 	_particles[no].isActive = true;
-	_particles[no].position = _emitPosition;
-	_particles[no].velocity = (rnd3(seed + 3.15)) * speed;
-	_particles[no].color = float4(hsv_to_rgb(float3(h, _sai, _val)), 1);
-	_particles[no].duration = _lifeTime;
+	_particles[no].position = _emitPosition + (position * _range);
+	_particles[no].velocity = _velocity * velocity;
 	_particles[no].scale = scale;
+	_particles[no].lifeTime = _lifeTime * rnd(seed + 3);
+	_particles[no].elapsedTime = 0;
 }
 
 [numthreads(THREAD_NUM_X, 1, 1)]
@@ -82,16 +90,19 @@ void Update(uint3 id : SV_DispatchThreadID)
 {
 	uint no = id.x;
 
-	if (_particles[no].isActive) {
+	if (_particles[no].isActive)
+	{
 		_particles[no].velocity.y -= _gravity * _deltaTime;
 		_particles[no].position += _particles[no].velocity * _deltaTime;
-		_particles[no].duration -= _deltaTime;
-		_particles[no].color.a = max(_particles[no].duration / _lifeTime, 0);
-		if (_particles[no].duration <= 0) {
+		_particles[no].elapsedTime += _deltaTime;
+		_particles[no].scale = _scaleMax * (1 - (_particles[no].elapsedTime / _particles[no].lifeTime));
+		if (_particles[no].lifeTime <= _particles[no].elapsedTime)
+		{
 			_particles[no].isActive = false;
 			_deadList.Append(no);
 		}
-		else {
+		else
+		{
 			_activeList.Append(no);
 		}
 	}

@@ -14,8 +14,6 @@ public struct GPUParticleData
     public Vector3 velocity;
     // サイズ
     public float scale;
-    // 色
-    public Color color;
     // 生存時間
     public float lifeTime;
     // 経過時間
@@ -27,7 +25,7 @@ public class GPUParticleManager : MonoBehaviour
     // 定数
     #region define
     // ComputeShaderのスレッド数
-    protected const int THREAD_NUM_X = 1024;
+    protected const int THREAD_NUM_X = 32;
     #endregion
 
     // パブリック
@@ -41,7 +39,7 @@ public class GPUParticleManager : MonoBehaviour
     // エミッターの範囲
     public Vector3 range = Vector3.one;
 
-    public float velocityMax = 1000f;
+    public Vector3 velocity = Vector3.zero;
     public float lifeTime = 1;
     public float scaleMin = 1;
     public float scaleMax = 2;
@@ -204,8 +202,9 @@ public class GPUParticleManager : MonoBehaviour
         if (m_particleCounts[0] < m_numEmitParticles) return;
 
         // コンピュートシェーダーの変数の設定
+        computeShader.SetVector("_range", range);
         computeShader.SetVector("_emitPosition", position);
-        computeShader.SetFloat("_velocityMax", velocityMax);
+        computeShader.SetVector("_velocity", velocity);
         computeShader.SetFloat("_lifeTime", lifeTime);
         computeShader.SetFloat("_scaleMin", scaleMin);
         computeShader.SetFloat("_scaleMax", scaleMax);
@@ -262,7 +261,10 @@ public class GPUParticleManager : MonoBehaviour
     {
         if (Input.GetMouseButtonDown(0))
         {
-            EmitParticle(transform.position);
+            Vector3 mpos = Input.mousePosition;
+            mpos.z = 10;
+            Vector3 pos = camera.ScreenToWorldPoint(mpos);
+            EmitParticle(pos);
         }
         UpdateParticle();
     }

@@ -3,21 +3,27 @@
 
 #define THREAD_NUM_X 32
 
-struct ParticleData
+struct GPUParticleData
 {
-	bool isActive;      // 有効フラグ
-	float3 position;    // 座標
-	float3 velocity;    // 加速度
-	float4 color;       // 色
-	float duration;     // 生存時間
-	float scale;        // サイズ
+	// アクティブか判断する
+	bool isActive;
+	// 座標
+	float3 position;
+	// 速度
+	float3 velocity;
+	// サイズ
+	float scale;
+	// 生存時間
+	float lifeTime;
+	// 経過時間
+	float elapsedTime;
 };
 
 int _ParticleNum;
 
 float3 _CameraPos;
 float4x3 _CameraFrustumNormals;
-StructuredBuffer<ParticleData> _ParticleBuffer;
+StructuredBuffer<GPUParticleData> _ParticleBuffer;
 AppendStructuredBuffer<uint> _InViewAppend;
 StructuredBuffer<uint> _ParticleActiveList;
 
@@ -29,7 +35,7 @@ void CheckCameraCulling(uint3 id : SV_DispatchThreadID)
 	uint particleIndex = _ParticleActiveList[idx];
 
 	if (particleIndex < _ParticleNum) {
-		ParticleData data = _ParticleBuffer[particleIndex];
+		GPUParticleData data = _ParticleBuffer[particleIndex];
 
 		// CheckCulling!
 		float3 posFromCamera = data.position - _CameraPos;

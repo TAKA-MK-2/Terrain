@@ -19,15 +19,21 @@
 		float4 tangent;
 	};
 
-	struct ParticleData
+	 struct GPUParticleData
 	{
-		bool isActive;      // 有効フラグ
-		float3 position;    // 座標
-		float3 velocity;    // 加速度
-		float4 color;       // 色
-		float duration;     // 生存時間
-		float scale;        // サイズ
-	};
+		// アクティブか判断する
+		bool isActive;
+		// 座標
+		float3 position;
+		// 速度
+		float3 velocity;
+		// サイズ
+		float scale;
+		// 生存時間
+		float lifeTime;
+		// 経過時間
+		float elapsedTime;
+	 };
 
 	struct v2f
 	{
@@ -42,7 +48,7 @@
 
 	StructuredBuffer<uint> _indices;
 	StructuredBuffer<VertexData> _vertex;
-	StructuredBuffer<ParticleData> _Particles;
+	StructuredBuffer<GPUParticleData> _Particles;
 
 	sampler2D _MainTex;
 
@@ -83,13 +89,8 @@
 		v2f o;
 		o.pos = mul(UNITY_MATRIX_P, mul(UNITY_MATRIX_MV, pos) + float4(pos.x, pos.y, 0, 0));
 		o.uv = uv;
-		//o.normal = normal;
-		//o.tangent = tangent;
-		//o.worldNormal = mul(unity_ObjectToWorld, normal);
-		//o.worldPos = mul(unity_ObjectToWorld, pos).xyz;
-		//o.color = float4(1, 1, 1, 1);
-		o.color = _Particles[iidx].color;
-
+		o.color = float4(1, 1, 1, 1);
+		
 		return o;
 	}
 
@@ -97,7 +98,6 @@
 	{
 
 		fixed4 col = tex2D(_MainTex, i.uv);
-
 		return col;
 	}
 		ENDCG
@@ -105,7 +105,7 @@
 		SubShader
 	{
 		//Tags{ "RenderType" = "Opaque" }
-			Tags{ "RenderType" = "Transparent" "IgnoreProjector" = "True" "RenderType" = "Transparent" }
+			Tags{ "RenderType" = "Transparent" "IgnoreProjector" = "True"}
 			LOD 100
 
 			Pass
