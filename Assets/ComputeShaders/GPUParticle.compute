@@ -6,7 +6,7 @@
 // 更新
 #pragma kernel Update
 
-#define THREAD_NUM_X 32
+#define THREAD_NUM_X 8
 
 struct GPUParticleData
 {
@@ -16,6 +16,8 @@ struct GPUParticleData
 	float3 position;
 	// 速度
 	float3 velocity;
+	float3 rotation;
+	float3 angVelocity;
 	// サイズ
 	float scale;
 	// 生存時間
@@ -49,6 +51,8 @@ AppendStructuredBuffer<uint> _activeList;
 
 float3 _emitPosition;
 float3 _velocity;
+float3 _rotation;
+float3 _angVelocity;
 float _deltaTime;
 float _elapsedTime;
 float _lifeTime;
@@ -58,6 +62,7 @@ float _gravity;
 float _sai;
 float _val;
 float3 _range;
+float3 _direction;
 
 [numthreads(THREAD_NUM_X, 1, 1)]
 void Init(uint3 id : SV_DispatchThreadID)
@@ -72,14 +77,18 @@ void Init(uint3 id : SV_DispatchThreadID)
 void Emit()
 {
 	uint no = _particlePool.Consume();
-	float2 seed = float2(no + 1 + _elapsedTime, no + 2 + _elapsedTime);
+	float2 seed = float2(no + _elapsedTime, no + 1 + _elapsedTime);
 	float3 position = rnd3(seed);
-	float3 velocity = rnd3(seed + 1);
-	float scale = (rnd(seed + 3) - 0.5) * 2.0 * (_scaleMax - _scaleMin) + _scaleMin;
+	float3 rotation = rnd3(seed + 1);
+	float3 velocity = rnd3(seed + 2);
+	float scale = rnd(seed + 3) * (_scaleMax - _scaleMin) + _scaleMin;
 
 	_particles[no].isActive = true;
 	_particles[no].position = _emitPosition + (position * _range);
 	_particles[no].velocity = _velocity * velocity;
+	_particles[no].velocity.y = abs(_particles[no].velocity.y);
+	_particles[no].rotation = _angVelocity * rotation;
+	_particles[no].angVelocity = _angVelocity * rotation;
 	_particles[no].scale = scale;
 	_particles[no].lifeTime = _lifeTime * rnd(seed + 3);
 	_particles[no].elapsedTime = 0;
@@ -92,10 +101,11 @@ void Update(uint3 id : SV_DispatchThreadID)
 
 	if (_particles[no].isActive)
 	{
-		_particles[no].velocity.y -= _gravity * _deltaTime;
-		_particles[no].position += _particles[no].velocity * _deltaTime;
 		_particles[no].elapsedTime += _deltaTime;
-		_particles[no].scale = _scaleMax * (1 - (_particles[no].elapsedTime / _particles[no].lifeTime));
+		_particles[no].position += _particles[no].velocity * _deltaTime;
+		_particles[no].velocity.y -= _gravity * _deltaTime;
+		_particles[no].rotation += _particles[no].angVelocity * _deltaTime;
+		_particles[no].scale = _scaleMax * (1 - pow(_particles[no].elapsedTime / _particles[no].lifeTime, 3.0));
 		if (_particles[no].lifeTime <= _particles[no].elapsedTime)
 		{
 			_particles[no].isActive = false;

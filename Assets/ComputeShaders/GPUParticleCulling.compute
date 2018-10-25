@@ -11,6 +11,8 @@ struct GPUParticleData
 	float3 position;
 	// 速度
 	float3 velocity;
+	float3 rotation;
+	float3 angVelocity;
 	// サイズ
 	float scale;
 	// 生存時間
