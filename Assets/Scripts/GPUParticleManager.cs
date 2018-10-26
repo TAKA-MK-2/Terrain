@@ -12,10 +12,16 @@ public struct GPUParticleData
     public Vector3 position;
     // 速度
     public Vector3 velocity;
+    // 回転
     public Vector3 rotation;
+    // 角速度
     public Vector3 angVelocity;
-    // サイズ
+    // スケール
     public float scale;
+    // 開始スケール
+    public float startScale;
+    // 最終スケール
+    public float endScale;
     // 生存時間
     public float lifeTime;
     // 経過時間
@@ -30,33 +36,41 @@ public class GPUParticleManager : MonoBehaviour
     protected const int THREAD_NUM_X = 8;
     #endregion
 
-    // パブリック
-    #region public
-    // 最大パーティクル数
-    public int numMaxParticles = 1024;
-    // エミット数
-    public int numMaxEmitParticles = 8;
+    // エディターから設定する変数
+    #region SerializeField
     // コンピュートシェーダー
-    public ComputeShader computeShader;
-    // エミッターの範囲
-    public Vector3 range = Vector3.one;
+    [SerializeField] ComputeShader _computeShader;
+    // 最大パーティクル数
+    [SerializeField] int _numMaxParticles = 1048576;
+    // エミット数
+    [SerializeField] int _numMaxEmitParticles = 1024;
+    // エミッッターのサイズ
+    [SerializeField] Vector3 _range = Vector3.zero;
     // エミットの方向
-    public Vector3 direction = Vector3.up;
-    public Vector3 velocity = Vector3.zero;
-    public Vector3 angVelocity = Vector3.zero;
-    public float lifeTime = 1;
-    public float scaleMin = 1;
-    public float scaleMax = 2;
-    public float gravity = 9.8f;
-
+    [SerializeField] Vector3 _direction = Vector3.up;
+    // 速度
+    [SerializeField] Vector3 _velocity = Vector3.zero;
+    // 重力
+    [SerializeField] float _gravity = 2f;
+    // 角速度
+    [SerializeField] Vector3 _angVelocity = Vector3.zero;
+    // 開始スケール
+    [SerializeField] float _startScale = 1;
+    // 最終スケール
+    [SerializeField] float _endScale = 2;
+    // 生存時間
+    [SerializeField] float _lifeTime = 1;
+    // 彩度
     [Range(0, 1)]
-    public float sai = 1;   // 彩度
+    [SerializeField] float _sai = 1;
+    // 明るさ
     [Range(0, 1)]
-    public float val = 1;   // 明るさ
-    public Camera camera;
+    [SerializeField] float _val = 1;
+    // カメラ
+    [SerializeField] Camera _camera;
     #endregion
 
-    // プライベート
+    // メンバ変数
     #region private
     // パーティクル構造体のバッファ
     private ComputeBuffer m_particlesBuffer;
@@ -81,23 +95,22 @@ public class GPUParticleManager : MonoBehaviour
     // 更新カーネル
     private int m_updateKernel = -1;
     // 使用できるパーティクル数
-    //protected int particleActiveNum = 0;
     private int m_particlePoolNum = 0;
-
-    private int m_cspropid_Particles;
-    private int m_cspropid_DeadList;
-    private int m_cspropid_ActiveList;
-    private int m_cspropid_EmitNum;
-    private int m_cspropid_ParticlePool;
 
     // 初期化を行ったか判断する
     private bool m_isInitialized = false;
     #endregion
 
+    // デバッグ用
+    #region debug
+    private int[] debugCounts = { 0, 0, 0, 0 };
+    #endregion
+
+    // ゲッター
+    #region get
     // パーティクル数を取得する
     public int GetParticleNum() { return m_numParticles; }
 
-    private int[] debugCounts = { 0, 0, 0, 0 };
     // アクティブなパーティクルの数を取得（デバッグ機能）
     public int GetActiveParticleNum()
     {
@@ -113,21 +126,26 @@ public class GPUParticleManager : MonoBehaviour
 
     // particlePoolBuffer内の個数バッファ
     public ComputeBuffer GetParticleCountBuffer() { return m_particleActiveCountBuffer; }
-    //public virtual ComputeBuffer GetActiveCountBuffer() { return particleActiveCountBuffer; }
+    #endregion
 
+    // セッター
+    #region set
     // インスタンスあたりの頂点数を設定
     public void SetVertexCount(int numVertices)
     {
         m_particleCounts[0] = numVertices;
     }
+    #endregion
 
+    // 初期化処理
+    #region initialize
     // 初期化
     public void Initialize()
     {
         // パーティクル数をスレッド数の倍数にする
-        m_numParticles = (numMaxParticles / THREAD_NUM_X) * THREAD_NUM_X;
+        m_numParticles = (_numMaxParticles / THREAD_NUM_X) * THREAD_NUM_X;
         // エミット数をスレッド数の倍数にする
-        m_numEmitParticles = (numMaxEmitParticles / THREAD_NUM_X) * THREAD_NUM_X;
+        m_numEmitParticles = (_numMaxEmitParticles / THREAD_NUM_X) * THREAD_NUM_X;
         //Debug.Log("particleNum " + m_numParticles + " emitNum " + m_numEmitParticles + " THREAD_NUM_X " + THREAD_NUM_X);
 
         // コンピュートバッファの生成
@@ -141,30 +159,38 @@ public class GPUParticleManager : MonoBehaviour
         m_particlePoolCountBuffer.SetData(m_particleCounts);
 
         // カーネルの設定
-        m_initKernel = computeShader.FindKernel("Init");
-        m_emitKernel = computeShader.FindKernel("Emit");
-        m_updateKernel = computeShader.FindKernel("Update");
-
-        // 
-        m_cspropid_Particles = ShaderDefines.GetBufferPropertyID(ShaderDefines.BufferID._particles);
-        m_cspropid_DeadList = ShaderDefines.GetBufferPropertyID(ShaderDefines.BufferID._deadList);
-        m_cspropid_ActiveList = ShaderDefines.GetBufferPropertyID(ShaderDefines.BufferID._activeList);
-        m_cspropid_ParticlePool = ShaderDefines.GetBufferPropertyID(ShaderDefines.BufferID._particlePool);
-        m_cspropid_EmitNum = ShaderDefines.GetIntPropertyID(ShaderDefines.IntID._emitNum);
-
+        m_initKernel = _computeShader.FindKernel("Init");
+        m_emitKernel = _computeShader.FindKernel("Emit");
+        m_updateKernel = _computeShader.FindKernel("Update");
         //Debug.Log("initKernel " + m_initKernel + " emitKernel " + m_emitKernel + " updateKernel " + m_updateKernel);
 
+
+        // コンピュートシェーダーの変数の設定
+        _computeShader.SetVector(ShaderDefines.GetVectorPropertyID(ShaderDefines.VectorID._range), _range);
+        _computeShader.SetVector(ShaderDefines.GetVectorPropertyID(ShaderDefines.VectorID._direction), _direction);
+        _computeShader.SetVector(ShaderDefines.GetVectorPropertyID(ShaderDefines.VectorID._velocity), _velocity);
+        _computeShader.SetFloat(ShaderDefines.GetFloatPropertyID(ShaderDefines.FloatID._gravity), _gravity);
+        _computeShader.SetVector(ShaderDefines.GetVectorPropertyID(ShaderDefines.VectorID._angVelocity), _angVelocity * Mathf.Deg2Rad);
+        _computeShader.SetFloat(ShaderDefines.GetFloatPropertyID(ShaderDefines.FloatID._lifeTime), _lifeTime);
+        _computeShader.SetFloat(ShaderDefines.GetFloatPropertyID(ShaderDefines.FloatID._startScale), _startScale);
+        _computeShader.SetFloat(ShaderDefines.GetFloatPropertyID(ShaderDefines.FloatID._endScale), _endScale);
+        _computeShader.SetFloat(ShaderDefines.GetFloatPropertyID(ShaderDefines.FloatID._sai), _sai);
+        _computeShader.SetFloat(ShaderDefines.GetFloatPropertyID(ShaderDefines.FloatID._val), _val);
+
         // バッファの設定
-        computeShader.SetBuffer(m_initKernel, m_cspropid_Particles, m_particlesBuffer);
-        computeShader.SetBuffer(m_initKernel, m_cspropid_DeadList, m_particlePoolBuffer);
+        _computeShader.SetBuffer(m_initKernel, ShaderDefines.GetBufferPropertyID(ShaderDefines.BufferID._particles), m_particlesBuffer);
+        _computeShader.SetBuffer(m_initKernel, ShaderDefines.GetBufferPropertyID(ShaderDefines.BufferID._deadList), m_particlePoolBuffer);
 
         // パーティクル数の分だけ初期化カーネルを実行する
-        computeShader.Dispatch(m_initKernel, m_numParticles / THREAD_NUM_X, 1, 1);
+        _computeShader.Dispatch(m_initKernel, m_numParticles / THREAD_NUM_X, 1, 1);
 
         // 初期化処理終了
         m_isInitialized = true;
     }
+    #endregion
 
+    // 更新処理
+    #region update
     // パーティクルの更新
     public void UpdateParticle()
     {
@@ -172,26 +198,26 @@ public class GPUParticleManager : MonoBehaviour
         m_particleActiveBuffer.SetCounterValue(0);
 
         // コンピュートシェーダーの変数の設定
-        computeShader.SetFloat("_deltaTime", Time.deltaTime);
-        computeShader.SetFloat("_lifeTime", lifeTime);
-        computeShader.SetFloat("_gravity", gravity);
+        _computeShader.SetFloat("_deltaTime", Time.deltaTime);
+        _computeShader.SetFloat("_lifeTime", _lifeTime);
+        _computeShader.SetFloat("_gravity", _gravity);
 
         // コンピュートバッファの設定
-        computeShader.SetBuffer(m_updateKernel, "_particles", m_particlesBuffer);
-        computeShader.SetBuffer(m_updateKernel, "_deadList", m_particlePoolBuffer);
-        computeShader.SetBuffer(m_updateKernel, "_activeList", m_particleActiveBuffer);
+        _computeShader.SetBuffer(m_updateKernel, "_particles", m_particlesBuffer);
+        _computeShader.SetBuffer(m_updateKernel, "_deadList", m_particlePoolBuffer);
+        _computeShader.SetBuffer(m_updateKernel, "_activeList", m_particleActiveBuffer);
 
         // パーティクル数の分だけ更新カーネルを実行する
-        computeShader.Dispatch(m_updateKernel, m_numParticles / THREAD_NUM_X, 1, 1);
+        _computeShader.Dispatch(m_updateKernel, m_numParticles / THREAD_NUM_X, 1, 1);
 
         // 使用中のパーティクルのインデックスのリストを更新する
         m_particleActiveCountBuffer.SetData(m_particleCounts);
         ComputeBuffer.CopyCount(m_particleActiveBuffer, m_particleActiveCountBuffer, 0);
-        //particleActiveCountBuffer.GetData(particleCounts);
-        //particleActiveNum = particleCounts[0];
     }
+    #endregion
 
-
+    // 発生処理
+    #region emit
     // パーティクルの発生
     public void EmitParticle(Vector3 position)
     {
@@ -206,29 +232,22 @@ public class GPUParticleManager : MonoBehaviour
         if (m_particleCounts[0] < m_numEmitParticles) return;
 
         // コンピュートシェーダーの変数の設定
-        computeShader.SetVector("_range", range);
-        computeShader.SetVector("_direction", direction);
-        computeShader.SetVector("_emitPosition", position);
-        computeShader.SetVector("_velocity", velocity);
-        computeShader.SetVector("_angVelocity", angVelocity * Mathf.Deg2Rad);
-        computeShader.SetFloat("_lifeTime", lifeTime);
-        computeShader.SetFloat("_scaleMin", scaleMin);
-        computeShader.SetFloat("_scaleMax", scaleMax);
-        computeShader.SetFloat("_sai", sai);
-        computeShader.SetFloat("_val", val);
-        computeShader.SetFloat("_elapsedTime", Time.time);
+        _computeShader.SetVector(ShaderDefines.GetVectorPropertyID(ShaderDefines.VectorID._position), position);
+        _computeShader.SetFloat("_elapsedTime", Time.time);
 
         // コンピュートバッファの設定
-        computeShader.SetBuffer(m_emitKernel, "_particlePool", m_particlePoolBuffer);
-        computeShader.SetBuffer(m_emitKernel, "_particles", m_particlesBuffer);
+        _computeShader.SetBuffer(m_emitKernel, "_particlePool", m_particlePoolBuffer);
+        _computeShader.SetBuffer(m_emitKernel, "_particles", m_particlesBuffer);
 
         // エミット数の分だけエミットカーネルを実行する
         //cs.Dispatch(emitKernel, particleCounts[0] / THREAD_NUM_X, 1, 1);
-        computeShader.Dispatch(m_emitKernel, m_numEmitParticles / THREAD_NUM_X, 1, 1); 
+        _computeShader.Dispatch(m_emitKernel, m_numEmitParticles / THREAD_NUM_X, 1, 1); 
     }
+    #endregion
 
-
-    // ComputeBufferの解放
+    // 終了処理
+    #region finalize
+    // ComputeBufferの開放
     public void ReleaseBuffer()
     {
         if (m_particleActiveBuffer != null)
@@ -256,6 +275,7 @@ public class GPUParticleManager : MonoBehaviour
             m_particleActiveCountBuffer.Release();
         }
     }
+    #endregion
 
     void Awake()
     {
@@ -265,10 +285,14 @@ public class GPUParticleManager : MonoBehaviour
 
     void Update()
     {
-        //if (Input.GetKey(KeyCode.Space))
-        //{
+        if (Input.GetKey(KeyCode.Alpha1))
+        {
             EmitParticle(Vector3.zero);
-        //}
+        }
+        if (Input.GetKeyDown(KeyCode.Alpha2))
+        {
+            EmitParticle(Vector3.zero);
+        }
         UpdateParticle();
     }
 

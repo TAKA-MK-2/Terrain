@@ -11,10 +11,16 @@ struct GPUParticleData
 	float3 position;
 	// 速度
 	float3 velocity;
+	// 回転
 	float3 rotation;
+	// 角速度
 	float3 angVelocity;
-	// サイズ
+	// スケール
 	float scale;
+	// 開始スケール
+	float startScale;
+	// 最終スケール
+	float endScale;
 	// 生存時間
 	float lifeTime;
 	// 経過時間

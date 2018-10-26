@@ -141,20 +141,20 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 6ba1b2c5045576042aee1e132e74e746, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  numMaxParticles: 1000000
-  numMaxEmitParticles: 2000
-  computeShader: {fileID: 7200000, guid: ecc99b2bdb9ed5140ac814d41e51d0fb, type: 3}
-  range: {x: 0, y: 0, z: 0}
-  direction: {x: 0, y: 1, z: 0}
-  velocity: {x: 0, y: 5, z: 0}
-  angVelocity: {x: 0, y: 6, z: 0}
-  lifeTime: 1
-  scaleMin: 1
-  scaleMax: 2
-  gravity: 0
-  sai: 1
-  val: 1
-  camera: {fileID: 431218492}
+  _computeShader: {fileID: 7200000, guid: ecc99b2bdb9ed5140ac814d41e51d0fb, type: 3}
+  _numMaxParticles: 1024
+  _numMaxEmitParticles: 8
+  _range: {x: 0, y: 0, z: 0}
+  _direction: {x: 0, y: 1, z: 0}
+  _velocity: {x: 0, y: 5, z: 0}
+  _gravity: 9.8
+  _angVelocity: {x: 0, y: 0, z: 0}
+  _startScale: 1
+  _endScale: 2
+  _lifeTime: 1
+  _sai: 1
+  _val: 1
+  _camera: {fileID: 431218492}
 --- !u!4 &16672292
 Transform:
   m_ObjectHideFlags: 0
@@ -183,7 +183,7 @@ MonoBehaviour:
   cullingCS: {fileID: 7200000, guid: 2fc1eb244aa41e7468df95446d9fe3e0, type: 3}
   isCulling: 1
   scale: 1
-  mesh: {fileID: 10210, guid: 0000000000000000e000000000000000, type: 0}
+  mesh: {fileID: 10207, guid: 0000000000000000e000000000000000, type: 0}
   rotationOffsetAxis: {x: 1, y: 0, z: 0}
   rotationOffsetAngle: 0
   rotateOffset: {x: 0, y: 0, z: 0, w: 0}

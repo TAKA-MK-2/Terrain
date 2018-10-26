@@ -4,9 +4,6 @@ using System.Collections.Generic;
 
 namespace Utility
 {
-    /// <summary>
-    /// シェーダー定義
-    /// </summary>
     public static class ShaderDefines
     {
         public enum TextureID
@@ -19,23 +16,28 @@ namespace Utility
 
         public enum IntID
         {
-            // GPUParticle関係
             _emitNum,
 
-            _length,
+            _length
         }
 
         public enum BoolID
         {
-            _length,
+            _length
         }
 
         public enum FloatID
         {
+            _gravity,
+            _startScale,
+            _endScale,
+            _lifeTime,
+            _sai,
+            _val,
             _deltaTime,
             _elapsedTime,
 
-            _length,
+            _length
         }
 
         public enum ColorID
@@ -47,6 +49,11 @@ namespace Utility
 
         public enum VectorID
         {
+            _position,
+            _range,
+            _direction,
+            _velocity,
+            _angVelocity,
             _rotationOffsetAxis,
             
             _length
@@ -54,7 +61,6 @@ namespace Utility
 
         public enum BufferID
         {
-            // GPUParticle関係
             _particles,
             _particlePool,
             _deadList,
