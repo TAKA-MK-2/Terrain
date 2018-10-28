@@ -137,7 +137,7 @@ void Update(uint3 id : SV_DispatchThreadID)
 		_particles[no].position += _particles[no].velocity * _deltaTime;
 		_particles[no].velocity.y -= _gravity * _deltaTime;
 		_particles[no].rotation += _particles[no].angVelocity * _deltaTime;
-		_particles[no].scale = (_particles[no].endScale - _particles[no].startScale) * (pow(_particles[no].elapsedTime / _particles[no].lifeTime, 3.0)) + _particles[no].startScale;
+		_particles[no].scale = (_particles[no].endScale - _particles[no].startScale) * (1 - pow(_particles[no].elapsedTime / _particles[no].lifeTime, 3.0)) + _particles[no].startScale;
 	}
 
 }

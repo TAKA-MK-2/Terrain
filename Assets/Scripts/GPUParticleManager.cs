@@ -199,13 +199,11 @@ public class GPUParticleManager : MonoBehaviour
 
         // コンピュートシェーダーの変数の設定
         _computeShader.SetFloat("_deltaTime", Time.deltaTime);
-        _computeShader.SetFloat("_lifeTime", _lifeTime);
-        _computeShader.SetFloat("_gravity", _gravity);
 
         // コンピュートバッファの設定
-        _computeShader.SetBuffer(m_updateKernel, "_particles", m_particlesBuffer);
-        _computeShader.SetBuffer(m_updateKernel, "_deadList", m_particlePoolBuffer);
-        _computeShader.SetBuffer(m_updateKernel, "_activeList", m_particleActiveBuffer);
+        _computeShader.SetBuffer(m_updateKernel, ShaderDefines.GetBufferPropertyID(ShaderDefines.BufferID._particles), m_particlesBuffer);
+        _computeShader.SetBuffer(m_updateKernel, ShaderDefines.GetBufferPropertyID(ShaderDefines.BufferID._deadList), m_particlePoolBuffer);
+        _computeShader.SetBuffer(m_updateKernel, ShaderDefines.GetBufferPropertyID(ShaderDefines.BufferID._activeList), m_particleActiveBuffer);
 
         // パーティクル数の分だけ更新カーネルを実行する
         _computeShader.Dispatch(m_updateKernel, m_numParticles / THREAD_NUM_X, 1, 1);
@@ -225,7 +223,7 @@ public class GPUParticleManager : MonoBehaviour
         m_particlePoolCountBuffer.SetData(m_particleCounts);
         ComputeBuffer.CopyCount(m_particlePoolBuffer, m_particlePoolCountBuffer, 0);
         m_particlePoolCountBuffer.GetData(m_particleCounts);
-        //Debug.Log("EmitParticle Pool Num " + m_particleCounts[0] + " position " + position);
+        Debug.Log("EmitParticle Pool Num " + m_particleCounts[0] + " position " + position);
         m_particlePoolNum = m_particleCounts[0];
 
         // エミット数未満なら発生させない
@@ -233,11 +231,11 @@ public class GPUParticleManager : MonoBehaviour
 
         // コンピュートシェーダーの変数の設定
         _computeShader.SetVector(ShaderDefines.GetVectorPropertyID(ShaderDefines.VectorID._position), position);
-        _computeShader.SetFloat("_elapsedTime", Time.time);
+        _computeShader.SetFloat(ShaderDefines.GetFloatPropertyID(ShaderDefines.FloatID._elapsedTime), Time.time);
 
         // コンピュートバッファの設定
-        _computeShader.SetBuffer(m_emitKernel, "_particlePool", m_particlePoolBuffer);
-        _computeShader.SetBuffer(m_emitKernel, "_particles", m_particlesBuffer);
+        _computeShader.SetBuffer(m_emitKernel, ShaderDefines.GetBufferPropertyID(ShaderDefines.BufferID._particlePool), m_particlePoolBuffer);
+        _computeShader.SetBuffer(m_emitKernel, ShaderDefines.GetBufferPropertyID(ShaderDefines.BufferID._particles), m_particlesBuffer);
 
         // エミット数の分だけエミットカーネルを実行する
         //cs.Dispatch(emitKernel, particleCounts[0] / THREAD_NUM_X, 1, 1);

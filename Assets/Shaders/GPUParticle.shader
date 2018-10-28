@@ -55,8 +55,8 @@
 	};
 
 	StructuredBuffer<uint> _indices;
-	StructuredBuffer<VertexData> _vertex;
-	StructuredBuffer<GPUParticleData> _Particles;
+	StructuredBuffer<VertexData> _vertices;
+	StructuredBuffer<GPUParticleData> _particles;
 
 	sampler2D _MainTex;
 
@@ -68,29 +68,29 @@
 	v2f vert(uint vid : SV_VertexID, uint iid : SV_InstanceID)
 	{
 		uint idx = _indices[vid];
-		float4 pos = float4(_vertex[idx].vertex, 1.0);
-		float2 uv = _vertex[idx].uv;
-		float3 normal = _vertex[idx].normal;
-		float4 tangent = _vertex[idx].tangent;
+		float4 pos = float4(_vertices[idx].vertex, 1.0);
+		float2 uv = _vertices[idx].uv;
+		float3 normal = _vertices[idx].normal;
+		float4 tangent = _vertices[idx].tangent;
 
 		//float4 Q = getAngleAxisRotation(_RotationOffsetAxis.xyz, _RotationOffsetAxis.w);
 
 		uint iidx = GetParticleIndex(iid);
 
-		//float4 rotation = qmul(float4(_Particles[iidx].rotation, 1), Q);
+		//float4 rotation = qmul(float4(_particles[iidx].rotation, 1), Q);
 		float4 rotation = getAngleAxisRotation(_RotationOffsetAxis.xyz, _RotationOffsetAxis.w);
 
-		pos.xyz *= _Particles[iidx].scale;
+		pos.xyz *= _particles[iidx].scale;
 		pos.xyz = rotateWithQuaternion(pos.xyz, rotation);
-		pos.xyz += _Particles[iidx].position;
+		pos.xyz += _particles[iidx].position;
 
-		float3 diff = _upVec * _Particles[iidx].scale;
+		float3 diff = _upVec * _particles[iidx].scale;
 		float3 finalPosition;
 		float3 tv0 = pos;
 		{
 			float3 eyeVector = ObjSpaceViewDir(float4(tv0, 0));
 			float3 sideVector = normalize(cross(eyeVector, diff));
-			tv0 += (uv.x - 0.5f) * sideVector * _Particles[iidx].scale;
+			tv0 += (uv.x - 0.5f) * sideVector * _particles[iidx].scale;
 			tv0 += (uv.y - 0.5f) * diff;
 			finalPosition = tv0;
 		}

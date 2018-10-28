@@ -266,12 +266,12 @@ public class GPUParticleRenderer : MonoBehaviour
     {
         UpdateRotationOffsetAxis();
 
-        material.SetBuffer("_vertex", meshVertexBuffer);
+        material.SetBuffer("_vertices", meshVertexBuffer);
         material.SetBuffer("_indices", meshIndicesBuffer);
         //material.SetVector("_RotationOffsetAxis", new Vector4(rotationOffsetAxis.x, rotationOffsetAxis.y, rotationOffsetAxis.z, rotationOffsetAngle * Mathf.Deg2Rad));
         material.SetVector("_RotationOffsetAxis", rotateOffset);
 
-        material.SetBuffer("_Particles", particleBuffer);
+        material.SetBuffer("_particles", particleBuffer);
         material.SetBuffer("_ParticleActiveList", activeIndexBuffer);
 
         material.SetVector("_upVec", Vector3.up);

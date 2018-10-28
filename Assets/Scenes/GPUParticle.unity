@@ -38,7 +38,7 @@ RenderSettings:
   m_ReflectionIntensity: 1
   m_CustomReflection: {fileID: 0}
   m_Sun: {fileID: 0}
-  m_IndirectSpecularColor: {r: 0.4366757, g: 0.48427194, b: 0.5645252, a: 1}
+  m_IndirectSpecularColor: {r: 0.43667546, g: 0.48427135, b: 0.5645225, a: 1}
   m_UseRadianceAmbientProbe: 0
 --- !u!157 &3
 LightmapSettings:
@@ -144,10 +144,10 @@ MonoBehaviour:
   _computeShader: {fileID: 7200000, guid: ecc99b2bdb9ed5140ac814d41e51d0fb, type: 3}
   _numMaxParticles: 1024
   _numMaxEmitParticles: 8
-  _range: {x: 0, y: 0, z: 0}
+  _range: {x: 1, y: 1, z: 1}
   _direction: {x: 0, y: 1, z: 0}
   _velocity: {x: 0, y: 5, z: 0}
-  _gravity: 9.8
+  _gravity: 0
   _angVelocity: {x: 0, y: 0, z: 0}
   _startScale: 1
   _endScale: 2
@@ -183,7 +183,7 @@ MonoBehaviour:
   cullingCS: {fileID: 7200000, guid: 2fc1eb244aa41e7468df95446d9fe3e0, type: 3}
   isCulling: 1
   scale: 1
-  mesh: {fileID: 10207, guid: 0000000000000000e000000000000000, type: 0}
+  mesh: {fileID: 10210, guid: 0000000000000000e000000000000000, type: 0}
   rotationOffsetAxis: {x: 1, y: 0, z: 0}
   rotationOffsetAngle: 0
   rotateOffset: {x: 0, y: 0, z: 0, w: 0}
