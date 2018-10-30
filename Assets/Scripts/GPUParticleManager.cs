@@ -206,7 +206,7 @@ public class GPUParticleManager : MonoBehaviour
     // 発生処理
     #region emit
     // パーティクルの発生
-    public void EmitParticle(Vector3 position)
+    public void EmitParticle(Vector3 _position)
     {
         // 未使用のパーティクルの個数を取得
         m_particlePoolCountBuffer.SetData(m_particleCounts);
@@ -229,7 +229,7 @@ public class GPUParticleManager : MonoBehaviour
         _computeShader.SetFloat(ShaderDefines.GetFloatPropertyID(ShaderDefines.FloatID._lifeTime), _lifeTime);
         _computeShader.SetFloat(ShaderDefines.GetFloatPropertyID(ShaderDefines.FloatID._sai), _sai);
         _computeShader.SetFloat(ShaderDefines.GetFloatPropertyID(ShaderDefines.FloatID._val), _val);
-        _computeShader.SetVector(ShaderDefines.GetVectorPropertyID(ShaderDefines.VectorID._position), position);
+        _computeShader.SetVector(ShaderDefines.GetVectorPropertyID(ShaderDefines.VectorID._position), _position);
         _computeShader.SetFloat(ShaderDefines.GetFloatPropertyID(ShaderDefines.FloatID._elapsedTime), Time.time);
 
         // コンピュートバッファの設定
