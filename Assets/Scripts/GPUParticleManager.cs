@@ -33,7 +33,7 @@ public class GPUParticleManager : MonoBehaviour
     // 定数
     #region define
     // ComputeShaderのスレッド数
-    protected const int THREAD_NUM_X = 8;
+    protected const int THREAD_NUM_X = 32;
     #endregion
 
     // エディターから設定する変数
@@ -143,9 +143,10 @@ public class GPUParticleManager : MonoBehaviour
     public void Initialize()
     {
         // パーティクル数をスレッド数の倍数にする
-        m_numParticles = (_numMaxParticles / THREAD_NUM_X) * THREAD_NUM_X;
+        m_numParticles = Mathf.CeilToInt(_numMaxParticles / (float)THREAD_NUM_X) * THREAD_NUM_X;
+       
         // エミット数をスレッド数の倍数にする
-        m_numEmitParticles = (_numMaxEmitParticles / THREAD_NUM_X) * THREAD_NUM_X;
+        m_numEmitParticles = Mathf.CeilToInt(_numMaxEmitParticles / (float)THREAD_NUM_X) * THREAD_NUM_X;
         //Debug.Log("particleNum " + m_numParticles + " emitNum " + m_numEmitParticles + " THREAD_NUM_X " + THREAD_NUM_X);
 
         // コンピュートバッファの生成
@@ -164,18 +165,6 @@ public class GPUParticleManager : MonoBehaviour
         m_updateKernel = _computeShader.FindKernel("Update");
         //Debug.Log("initKernel " + m_initKernel + " emitKernel " + m_emitKernel + " updateKernel " + m_updateKernel);
 
-
-        // コンピュートシェーダーの変数の設定
-        _computeShader.SetVector(ShaderDefines.GetVectorPropertyID(ShaderDefines.VectorID._range), _range);
-        _computeShader.SetVector(ShaderDefines.GetVectorPropertyID(ShaderDefines.VectorID._direction), _direction);
-        _computeShader.SetVector(ShaderDefines.GetVectorPropertyID(ShaderDefines.VectorID._velocity), _velocity);
-        _computeShader.SetFloat(ShaderDefines.GetFloatPropertyID(ShaderDefines.FloatID._gravity), _gravity);
-        _computeShader.SetVector(ShaderDefines.GetVectorPropertyID(ShaderDefines.VectorID._angVelocity), _angVelocity * Mathf.Deg2Rad);
-        _computeShader.SetFloat(ShaderDefines.GetFloatPropertyID(ShaderDefines.FloatID._lifeTime), _lifeTime);
-        _computeShader.SetFloat(ShaderDefines.GetFloatPropertyID(ShaderDefines.FloatID._startScale), _startScale);
-        _computeShader.SetFloat(ShaderDefines.GetFloatPropertyID(ShaderDefines.FloatID._endScale), _endScale);
-        _computeShader.SetFloat(ShaderDefines.GetFloatPropertyID(ShaderDefines.FloatID._sai), _sai);
-        _computeShader.SetFloat(ShaderDefines.GetFloatPropertyID(ShaderDefines.FloatID._val), _val);
 
         // バッファの設定
         _computeShader.SetBuffer(m_initKernel, ShaderDefines.GetBufferPropertyID(ShaderDefines.BufferID._particles), m_particlesBuffer);
@@ -198,7 +187,7 @@ public class GPUParticleManager : MonoBehaviour
         m_particleActiveBuffer.SetCounterValue(0);
 
         // コンピュートシェーダーの変数の設定
-        _computeShader.SetFloat("_deltaTime", Time.deltaTime);
+        _computeShader.SetFloat(ShaderDefines.GetFloatPropertyID(ShaderDefines.FloatID._deltaTime), Time.deltaTime);
 
         // コンピュートバッファの設定
         _computeShader.SetBuffer(m_updateKernel, ShaderDefines.GetBufferPropertyID(ShaderDefines.BufferID._particles), m_particlesBuffer);
@@ -223,13 +212,23 @@ public class GPUParticleManager : MonoBehaviour
         m_particlePoolCountBuffer.SetData(m_particleCounts);
         ComputeBuffer.CopyCount(m_particlePoolBuffer, m_particlePoolCountBuffer, 0);
         m_particlePoolCountBuffer.GetData(m_particleCounts);
-        Debug.Log("EmitParticle Pool Num " + m_particleCounts[0] + " position " + position);
+        //Debug.Log("EmitParticle Pool Num " + m_particleCounts[0] + " position " + position);
         m_particlePoolNum = m_particleCounts[0];
 
         // エミット数未満なら発生させない
         if (m_particleCounts[0] < m_numEmitParticles) return;
 
         // コンピュートシェーダーの変数の設定
+        _computeShader.SetVector(ShaderDefines.GetVectorPropertyID(ShaderDefines.VectorID._range), _range);
+        _computeShader.SetVector(ShaderDefines.GetVectorPropertyID(ShaderDefines.VectorID._direction), _direction);
+        _computeShader.SetVector(ShaderDefines.GetVectorPropertyID(ShaderDefines.VectorID._velocity), _velocity);
+        _computeShader.SetFloat(ShaderDefines.GetFloatPropertyID(ShaderDefines.FloatID._gravity), _gravity);
+        _computeShader.SetVector(ShaderDefines.GetVectorPropertyID(ShaderDefines.VectorID._angVelocity), _angVelocity * Mathf.Deg2Rad);
+        _computeShader.SetFloat(ShaderDefines.GetFloatPropertyID(ShaderDefines.FloatID._startScale), _startScale);
+        _computeShader.SetFloat(ShaderDefines.GetFloatPropertyID(ShaderDefines.FloatID._endScale), _endScale);
+        _computeShader.SetFloat(ShaderDefines.GetFloatPropertyID(ShaderDefines.FloatID._lifeTime), _lifeTime);
+        _computeShader.SetFloat(ShaderDefines.GetFloatPropertyID(ShaderDefines.FloatID._sai), _sai);
+        _computeShader.SetFloat(ShaderDefines.GetFloatPropertyID(ShaderDefines.FloatID._val), _val);
         _computeShader.SetVector(ShaderDefines.GetVectorPropertyID(ShaderDefines.VectorID._position), position);
         _computeShader.SetFloat(ShaderDefines.GetFloatPropertyID(ShaderDefines.FloatID._elapsedTime), Time.time);
 
@@ -238,7 +237,6 @@ public class GPUParticleManager : MonoBehaviour
         _computeShader.SetBuffer(m_emitKernel, ShaderDefines.GetBufferPropertyID(ShaderDefines.BufferID._particles), m_particlesBuffer);
 
         // エミット数の分だけエミットカーネルを実行する
-        //cs.Dispatch(emitKernel, particleCounts[0] / THREAD_NUM_X, 1, 1);
         _computeShader.Dispatch(m_emitKernel, m_numEmitParticles / THREAD_NUM_X, 1, 1); 
     }
     #endregion
@@ -274,6 +272,14 @@ public class GPUParticleManager : MonoBehaviour
         }
     }
     #endregion
+
+    void OnValidate()
+    {
+        // エミット方向の値を-1～1にする
+        _direction.x = Mathf.Clamp(_direction.x, -1, 1);
+        _direction.y = Mathf.Clamp(_direction.y, -1, 1);
+        _direction.z = Mathf.Clamp(_direction.z, -1, 1);
+    }
 
     void Awake()
     {

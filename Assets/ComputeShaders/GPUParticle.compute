@@ -6,7 +6,7 @@
 // 更新
 #pragma kernel Update
 
-#define THREAD_NUM_X 8
+#define THREAD_NUM_X 32
 
 struct GPUParticleData
 {
@@ -62,7 +62,7 @@ float3 _position;
 float _scale;
 // 経過時間
 float _elapsedTime;
-// エミッッターのサイズ
+// エミッターのサイズ
 float3 _range;
 // エミットの方向
 float3 _direction;
@@ -98,12 +98,12 @@ void Init(uint3 id : SV_DispatchThreadID)
 void Emit()
 {
 	uint no = _particlePool.Consume();
-	float2 seed = float2(no + _elapsedTime, no + 1 + _elapsedTime);
+	float2 seed = float2(no, no + 1) * _elapsedTime % 10000;
 	float3 position = rnd3(seed);
 	float3 rotation = rnd3(seed + 1);
 	float3 velocity = rnd3(seed + 2);
 	float startScale = rnd(seed + 3) * _startScale;
-	float endScale = rnd(seed + 4) * (_endScale - _startScale) + _startScale;
+	float endScale = _endScale;
 
 	_particles[no].isActive = true;
 	_particles[no].position = _position + (position * _range);
@@ -121,23 +121,23 @@ void Update(uint3 id : SV_DispatchThreadID)
 {
 	uint no = id.x;
 
-	_particles[no].elapsedTime += _deltaTime;
-	if (_particles[no].lifeTime <= _particles[no].elapsedTime)
-	{
-		_particles[no].isActive = false;
-		_deadList.Append(no);
-	}
-	else
-	{
-		_activeList.Append(no);
-	}
-
 	if (_particles[no].isActive)
 	{
 		_particles[no].position += _particles[no].velocity * _deltaTime;
 		_particles[no].velocity.y -= _gravity * _deltaTime;
 		_particles[no].rotation += _particles[no].angVelocity * _deltaTime;
-		_particles[no].scale = (_particles[no].endScale - _particles[no].startScale) * (1 - pow(_particles[no].elapsedTime / _particles[no].lifeTime, 3.0)) + _particles[no].startScale;
+		_particles[no].scale = (pow(_particles[no].elapsedTime / _particles[no].lifeTime, 3.0)) * (_particles[no].endScale - _particles[no].startScale) + _particles[no].startScale;
+		_particles[no].elapsedTime += _deltaTime;
+		if (_particles[no].lifeTime <= _particles[no].elapsedTime)
+		{
+			_particles[no].isActive = false;
+			_deadList.Append(no);
+		}
+		else
+		{
+			_activeList.Append(no);
+		}
+
 	}
 
 }
