@@ -192,6 +192,7 @@ public class GPUParticleRenderer : MonoBehaviour
     #endregion
 
     public Material material;
+    public Texture texture;
     public ComputeShader cullingCS;
     public bool isCulling = true;
     public float scale = 1;
@@ -266,6 +267,7 @@ public class GPUParticleRenderer : MonoBehaviour
     {
         UpdateRotationOffsetAxis();
 
+        material.SetTexture("_MainTex", texture);
         material.SetBuffer("_vertices", meshVertexBuffer);
         material.SetBuffer("_indices", meshIndicesBuffer);
         //material.SetVector("_RotationOffsetAxis", new Vector4(rotationOffsetAxis.x, rotationOffsetAxis.y, rotationOffsetAxis.z, rotationOffsetAngle * Mathf.Deg2Rad));
