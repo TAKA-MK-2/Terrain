@@ -135,11 +135,11 @@ public class GPUParticleRenderer : MonoBehaviour
             var cPos = camera.transform.position;
             cs.SetFloats("_CameraPos", cPos.x, cPos.y, cPos.z);
 
-            cs.SetInt("_ParticleNum", particleNum);
-            cs.SetFloats("_CameraFrustumNormals", _normalsFloat);
-            cs.SetBuffer(kernel, "_InViewAppend", inViewsAppendBuffer);
-            cs.SetBuffer(kernel, "_ParticleBuffer", particleBuffer);
-            cs.SetBuffer(kernel, "_ParticleActiveList", activeList);
+            cs.SetInt("_numParticles", particleNum);
+            cs.SetFloats("_cameraFrustumNormals", _normalsFloat);
+            cs.SetBuffer(kernel, "_inViewAppend", inViewsAppendBuffer);
+            cs.SetBuffer(kernel, "_particlesBuffer", particleBuffer);
+            cs.SetBuffer(kernel, "_particleActiveList", activeList);
             cs.Dispatch(kernel, Mathf.CeilToInt((float)activeList.count / NUM_THREAD_X), 1, 1);
 
             inViewsCountBuffer.SetData(inViewsCounts);
@@ -274,7 +274,7 @@ public class GPUParticleRenderer : MonoBehaviour
         material.SetVector("_RotationOffsetAxis", rotateOffset);
 
         material.SetBuffer("_particles", particleBuffer);
-        material.SetBuffer("_ParticleActiveList", activeIndexBuffer);
+        material.SetBuffer("_particleActiveList", activeIndexBuffer);
 
         material.SetVector("_upVec", Vector3.up);
         material.SetPass(0);
@@ -317,7 +317,7 @@ public class GPUParticleRenderer : MonoBehaviour
 
                     material.EnableKeyword("GPUPARTICLE_CULLING_ON");
 
-                    material.SetBuffer("_InViewsList", data.inViewsAppendBuffer);
+                    material.SetBuffer("_inViewsList", data.inViewsAppendBuffer);
 
                     //data.inViewsCountBuffer.GetData(debugCount);
 

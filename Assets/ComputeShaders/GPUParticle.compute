@@ -6,8 +6,10 @@
 // 更新
 #pragma kernel Update
 
+// スレッド数
 #define THREAD_NUM_X 32
 
+// GPUパーティクル情報
 struct GPUParticleData
 {
 	// アクティブか判断する
@@ -44,16 +46,12 @@ inline float3 rnd3(float2 p)
 	return 2.0 * (float3(rnd(p * 1), rnd(p * 2), rnd(p * 3)) - 0.5);
 }
 
-float3 hsv_to_rgb(float3 HSV)
-{
-	float4 k = float4(1.0, 2.0 / 3.0, 1.0 / 3.0, 3.0);
-	float3 p = abs(frac(HSV.xxx + k.xyz) * 6.0 - k.www);
-	return HSV.z * lerp(k.xxx, clamp(p - k.xxx, 0.0, 1.0), HSV.y);
-}
-
+// GPUパーティクルのバッファ
 RWStructuredBuffer<GPUParticleData> _particles;
+// 非アクティブ状態のGPUパーティクルの番号のバッファ
 AppendStructuredBuffer<uint> _deadList;
 ConsumeStructuredBuffer<uint> _particlePool;
+// アクティブ状態のGPUパーティクルの番号のバッファ
 AppendStructuredBuffer<uint> _activeList;
 
 // 座標
