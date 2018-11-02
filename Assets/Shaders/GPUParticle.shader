@@ -70,12 +70,10 @@
 		StructuredBuffer<GPUParticleData> _particles;
 
 		// メインテクスチャ
-		sampler2D _MainTex;
+		sampler2D _mainTexture;
 
-		// メインテクスチャのスケールと座標
-		float4 _MainTex_ST;
 		// 軸による回転
-		float4 _RotationOffsetAxis;
+		float4 _rotationOffsetAxis;
 		// 上方向ベクトル
 		float3 _upVec;
 
@@ -97,7 +95,7 @@
 			//float4 rotation = qmul(float4(_particles[iidx].rotation, 1), Q);
 
 			// 回転を取得する
-			float4 rotation = getAngleAxisRotation(_RotationOffsetAxis.xyz, _RotationOffsetAxis.w);
+			float4 rotation = getAngleAxisRotation(_rotationOffsetAxis.xyz, _rotationOffsetAxis.w);
 
 			// 座標を計算する
 			pos.xyz *= _particles[iidx].scale;
@@ -116,7 +114,7 @@
 		fixed4  frag(v2f i) : SV_Target
 		{
 			// ピクセルの設定
-			fixed4 col = tex2D(_MainTex, i.uv) * i.color;
+			fixed4 col = tex2D(_mainTexture, i.uv) * i.color;
 			return col;
 		}
 

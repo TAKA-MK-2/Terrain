@@ -7,62 +7,68 @@ using UnityEngine;
 
 public class GPUParticleRenderer : MonoBehaviour
 {
+    // 定数
     #region define
     public class CullingData
     {
-        public ComputeBuffer inViewsAppendBuffer;
-        public ComputeBuffer inViewsCountBuffer;
-        //public int inViewsNum;
+        // ビュー内の追加バッファ
+        public ComputeBuffer m_inViewsAppendBuffer;
+        // inViewsAppendBufferの個数バッファ
+        public ComputeBuffer m_inViewsCountBuffer;
+        // [0]インスタンスあたりの頂点数 [1]インスタンス数 [2]開始する頂点位置 [3]開始するインスタンス
+        public int[] inViewsCounts = { 0, 1, 0, 0 };
 
-        public int[] inViewsCounts = { 0, 1, 0, 0 };    // [0]インスタンスあたりの頂点数 [1]インスタンス数 [2]開始する頂点位置 [3]開始するインスタンス
-
-        public CullingData(int particleNum)
+        // コンストラクタ
+        public CullingData(int _numParticles)
         {
-            inViewsAppendBuffer = new ComputeBuffer(particleNum, Marshal.SizeOf(typeof(int)), ComputeBufferType.Append);
-            inViewsAppendBuffer.SetCounterValue(0);
-            inViewsCountBuffer = new ComputeBuffer(4, Marshal.SizeOf(typeof(int)), ComputeBufferType.IndirectArguments);
-            //inViewsCounts = new int[] { 0, 1, 0, 0 };
-            inViewsCountBuffer.SetData(inViewsCounts);
+            // コンピュートバッファを生成する
+            m_inViewsAppendBuffer = new ComputeBuffer(_numParticles, Marshal.SizeOf(typeof(int)), ComputeBufferType.Append);
+            m_inViewsCountBuffer = new ComputeBuffer(4, Marshal.SizeOf(typeof(int)), ComputeBufferType.IndirectArguments);
+
+            // 追加バッファのカウンタを0にする
+            m_inViewsAppendBuffer.SetCounterValue(0);
+
+            // バッファにデータを設定する
+            m_inViewsCountBuffer.SetData(inViewsCounts);
         }
 
-        /// <summary>
-        /// 頂点数セット
-        /// </summary>
-        /// <param name="num"></param>
+        // 頂点数を設定する
         public void SetVertexCount(int num)
         {
             inViewsCounts[0] = num;
         }
 
+        // バッファの解放処理
         public void Release()
         {
-            if (inViewsAppendBuffer != null)
+            if (m_inViewsAppendBuffer != null)
             {
-                inViewsAppendBuffer.Release();
-                inViewsAppendBuffer = null;
+                m_inViewsAppendBuffer.Release();
+                m_inViewsAppendBuffer = null;
             }
-            if (inViewsCountBuffer != null)
+            if (m_inViewsCountBuffer != null)
             {
-                inViewsCountBuffer.Release();
-                inViewsCountBuffer = null;
+                m_inViewsCountBuffer.Release();
+                m_inViewsCountBuffer = null;
             }
         }
 
         private int[] debugCount = { 0, 0, 0, 0 };
-        /// <summary>
-        /// 視界内のパーティクルの数を取得（デバッグ機能）
-        /// </summary>
-        /// <returns></returns>
+
+        // 視界内のパーティクルの数を取得（デバッグ機能）
         public int GetInViewNum()
         {
-            inViewsCountBuffer.GetData(debugCount);
+            m_inViewsCountBuffer.GetData(debugCount);
             return debugCount[1];
         }
 
+        // ComputeShaderのスレッド数
         const int NUM_THREAD_X = 32;
 
+        // 平面
         private Plane[] _planes = new Plane[4];
-        private float[] _normalsFloat = new float[12];  // 4x3
+        // 4x3
+        private float[] _normalsFloat = new float[12];
         Vector3 temp;
 
         private void CalculateFrustumPlanes(Matrix4x4 mat, ref Plane[] planes)
@@ -130,20 +136,20 @@ public class GPUParticleRenderer : MonoBehaviour
                 _normalsFloat[i + 4] = _planes[i].normal.y;
                 _normalsFloat[i + 8] = _planes[i].normal.z;
             }
-            inViewsAppendBuffer.SetCounterValue(0);
+            m_inViewsAppendBuffer.SetCounterValue(0);
 
             var cPos = camera.transform.position;
             cs.SetFloats("_CameraPos", cPos.x, cPos.y, cPos.z);
 
             cs.SetInt("_numParticles", particleNum);
             cs.SetFloats("_cameraFrustumNormals", _normalsFloat);
-            cs.SetBuffer(kernel, "_inViewAppend", inViewsAppendBuffer);
+            cs.SetBuffer(kernel, "_inViewAppend", m_inViewsAppendBuffer);
             cs.SetBuffer(kernel, "_particlesBuffer", particleBuffer);
             cs.SetBuffer(kernel, "_particleActiveList", activeList);
             cs.Dispatch(kernel, Mathf.CeilToInt((float)activeList.count / NUM_THREAD_X), 1, 1);
 
-            inViewsCountBuffer.SetData(inViewsCounts);
-            ComputeBuffer.CopyCount(inViewsAppendBuffer, inViewsCountBuffer, 4);    // インスタンス数
+            m_inViewsCountBuffer.SetData(inViewsCounts);
+            ComputeBuffer.CopyCount(m_inViewsAppendBuffer, m_inViewsCountBuffer, 4);    // インスタンス数
             //inViewsCountBuffer.GetData(inViewsCounts);
             //inViewsNum = inViewsCounts[0];
             //Debug.Log("inViewsCounts " + inViewsCounts[0]);
@@ -191,138 +197,162 @@ public class GPUParticleRenderer : MonoBehaviour
 
     #endregion
 
-    public Material material;
-    public Texture texture;
-    public ComputeShader cullingCS;
-    public bool isCulling = true;
-    public float scale = 1;
-    public Mesh mesh;
-    public Vector3 rotationOffsetAxis = Vector3.right;
-    public float rotationOffsetAngle = 0;
+    // エディターから設定する変数
+    #region SerializeField
+    // シェーダーマテリアル
+    [SerializeField] Material _shaderMaterial;
+    // パーティクルのテクスチャ
+    [SerializeField] Texture _texture;
+    // カリングを計算するコンピュートシェーダー
+    [SerializeField] ComputeShader _cullingComputeShader;
+    // カリングを行うかどうか
+    [SerializeField] bool _isCulling = true;
+    // スケール
+    [SerializeField] float _scale = 1;
+    // パーティクルのメッシュ
+    [SerializeField] Mesh _mesh;
+    // 回転の軸
+    [SerializeField] Vector3 _rotationOffsetAxis = Vector3.right;
+    // 回転の角度
+    [SerializeField] float _rotationOffsetAngle = 0;
+    #endregion
+
+    // メンバ変数
+    #region member variable
+    // GPUパーティクル
+    private GPUParticleManager m_particle;
+    // パーティクル数
+    private int m_numParticles;
+    // パーティクル構造体のバッファ
+    private ComputeBuffer m_particlesBuffer;
+    // 使用中のパーティクルの番号のバッファ
+    private ComputeBuffer m_activeIndexBuffer;
+    // activeIndexBuffer内の個数バッファ
+    private ComputeBuffer m_activeCountBuffer;
+    // カメラごとのカリングデータ
+    private Dictionary<Camera, CullingData> m_cameraDatas = new Dictionary<Camera, CullingData>();
+    // メッシュデータのバッファ
+    private ComputeBuffer m_meshIndicesBuffer;
+    private ComputeBuffer m_meshVertexDataBuffer;
+    // メッシュの頂点番号数
+    private int m_numMeshIndices;
     // 計算済みのRotationOffset
-    [HideInInspector]
-    public Vector4 rotateOffset;    // 計算済みのRotationOffset
+    private Vector4 rotateOffset;
+    #endregion
 
-    private GPUParticleManager particle;
-    private int particleNum;
-    private ComputeBuffer particleBuffer;
-    private ComputeBuffer activeIndexBuffer;
-    private ComputeBuffer activeCountBuffer;
-    private Dictionary<Camera, CullingData> cameraDatas = new Dictionary<Camera, CullingData>();
-    // メッシュデータ
-    private ComputeBuffer meshIndicesBuffer;
-    private ComputeBuffer meshVertexBuffer;
-    private int meshIndicesNum;
-
-    void InitMeshDataBuffer(Mesh mesh, out ComputeBuffer vertexBuffer, out ComputeBuffer indicesBuffer, out int indicesNum)
+    // メンバ関数
+    #region method
+    // メッシュデータのバッファの初期化処理
+    void InitMeshDataBuffer(Mesh _mesh, out ComputeBuffer _vertexDataBuffer, out ComputeBuffer _indicesBuffer, out int _numIndices)
     {
-        //Debug.Log("Mesh " + mesh.name);
-        //Debug.Log("Vertex " + mesh.vertexCount);
-        //Debug.Log("Normal " + mesh.normals.Length);
-        //Debug.Log("UV " + mesh.uv.Length);
-        //Debug.Log("TANGENTS " + mesh.tangents.Length);
+        //Debug.Log("Mesh " + _mesh.name);
+        //Debug.Log("Vertex " + _mesh.vertexCount);
+        //Debug.Log("Normal " + _mesh.normals.Length);
+        //Debug.Log("UV " + _mesh.uv.Length);
+        //Debug.Log("TANGENTS " + _mesh.tangents.Length);
 
-        var indices = mesh.GetIndices(0);
-        var vertexDataArray = Enumerable.Range(0, mesh.vertexCount).Select(b =>
+        // メッシュの頂点番号を取得
+        int[] indices = _mesh.GetIndices(0);
+
+        // 頂点データを取得
+        VertexData[] vertexDataArray = Enumerable.Range(0, _mesh.vertexCount).Select(b =>
         {
-            //Debug.Log("b: " + b + " / " + mesh.vertexCount);
+            Debug.Log("b: " + b + " / " + _mesh.vertexCount);
             return new VertexData()
             {
-                vertex = mesh.vertices[b],
-                normal = mesh.normals[b],
-                uv = mesh.uv[b],
-                tangent = mesh.tangents[b],
+                vertex = _mesh.vertices[b],
+                normal = _mesh.normals[b],
+                uv = _mesh.uv[b],
+                tangent = _mesh.tangents[b],
             };
         }).ToArray();
 
-        indicesNum = indices.Length;
-        indicesBuffer = new ComputeBuffer(indices.Length, Marshal.SizeOf(typeof(uint)));
-        vertexBuffer = new ComputeBuffer(vertexDataArray.Length, Marshal.SizeOf(typeof(VertexData)));
-        indicesBuffer.SetData(indices);
-        vertexBuffer.SetData(vertexDataArray);
+        // 頂点番号数を取得
+        _numIndices = indices.Length;
+
+        // バッファを生成する
+        _indicesBuffer = new ComputeBuffer(indices.Length, Marshal.SizeOf(typeof(uint)));
+        _vertexDataBuffer = new ComputeBuffer(vertexDataArray.Length, Marshal.SizeOf(typeof(VertexData)));
+
+        // バッファにデータを設定する
+        _indicesBuffer.SetData(indices);
+        _vertexDataBuffer.SetData(vertexDataArray);
     }
 
-    void UpdateVertexBuffer(Camera camera)
+    // 頂点データバッファの更新処理
+    void UpdateVertexDataBuffer(Camera _camera)
     {
-        CullingData data = cameraDatas[camera];
+        // カメラのカリングデータを取得
+        CullingData data = m_cameraDatas[_camera];
+
+        // データがあるか判定する
         if (data == null)
         {
-            data = cameraDatas[camera] = new CullingData(particleNum);
-            data.SetVertexCount(meshIndicesNum);
+            // データを設定する
+            data = m_cameraDatas[_camera] = new CullingData(m_numParticles);
+            data.SetVertexCount(m_numMeshIndices);
         }
 
-        //_SetCommonParameterForCS(cullingCS);
-        data.Update(cullingCS, camera, particleNum, particleBuffer, activeIndexBuffer);
+        // カリングデータの更新処理
+        data.Update(_cullingComputeShader, _camera, m_numParticles, m_particlesBuffer, m_activeIndexBuffer);
     }
 
+    // 回転処理
     void UpdateRotationOffsetAxis()
     {
-        rotateOffset.x = rotationOffsetAxis.x;
-        rotateOffset.y = rotationOffsetAxis.y;
-        rotateOffset.z = rotationOffsetAxis.z;
-        rotateOffset.w = rotationOffsetAngle * Mathf.Deg2Rad;
+        rotateOffset.x = _rotationOffsetAxis.x;
+        rotateOffset.y = _rotationOffsetAxis.y;
+        rotateOffset.z = _rotationOffsetAxis.z;
+        rotateOffset.w = _rotationOffsetAngle * Mathf.Deg2Rad;
     }
 
+    // シェーダーの値を設定する
     void SetMaterialParam()
     {
+        // 回転処理
         UpdateRotationOffsetAxis();
 
-        material.SetTexture("_MainTex", texture);
-        material.SetBuffer("_vertices", meshVertexBuffer);
-        material.SetBuffer("_indices", meshIndicesBuffer);
-        //material.SetVector("_RotationOffsetAxis", new Vector4(rotationOffsetAxis.x, rotationOffsetAxis.y, rotationOffsetAxis.z, rotationOffsetAngle * Mathf.Deg2Rad));
-        material.SetVector("_RotationOffsetAxis", rotateOffset);
+        // シェーダーに値を設定する
+        _shaderMaterial.SetTexture("_mainTexture", _texture);
+        _shaderMaterial.SetBuffer("_vertices", m_meshVertexDataBuffer);
+        _shaderMaterial.SetBuffer("_indices", m_meshIndicesBuffer);
+        _shaderMaterial.SetVector("_RotationOffsetAxis", rotateOffset);
 
-        material.SetBuffer("_particles", particleBuffer);
-        material.SetBuffer("_particleActiveList", activeIndexBuffer);
+        _shaderMaterial.SetBuffer("_particles", m_particlesBuffer);
+        _shaderMaterial.SetBuffer("_particleActiveList", m_activeIndexBuffer);
 
-        material.SetVector("_upVec", Vector3.up);
-        material.SetPass(0);
+        _shaderMaterial.SetVector("_upVec", Vector3.up);
+        _shaderMaterial.SetPass(0);
     }
 
-    void Start()
-    {
-        particle = GetComponent<GPUParticleManager>();
-        if (particle != null)
-        {
-            particleNum = particle.GetParticleNum();
-            particleBuffer = particle.GetParticleBuffer();
-            activeIndexBuffer = particle.GetActiveParticleBuffer();
-            activeCountBuffer = particle.GetParticleCountBuffer();
-            //Debug.Log("particleNum " + particleNum);
-        }
-        else
-        {
-            Debug.LogError("Particle Class Not Found!!" + typeof(GPUParticleManager).FullName);
-        }
-        InitMeshDataBuffer(mesh, out meshVertexBuffer, out meshIndicesBuffer, out meshIndicesNum);
-    }
-
+    // GPUでオブジェクトを描画する
     void OnRenderObjectInternal()
     {
-        if (isCulling)
+        // カリングを行うか判定
+        if (_isCulling)
         {
-            var cam = Camera.current;
+            // カメラを取得
+            Camera cam = Camera.current;
 
-            if (!cameraDatas.ContainsKey(cam))
+            if (!m_cameraDatas.ContainsKey(cam))
             {
-                cameraDatas[cam] = null; // このフレームは登録だけ
+                // このフレームは登録だけ
+                m_cameraDatas[cam] = null;
             }
             else
             {
-                var data = cameraDatas[cam];
+                CullingData data = m_cameraDatas[cam];
                 if (data != null)
                 {
+                    // シェーダーの値を設定する
                     SetMaterialParam();
-
-                    material.EnableKeyword("GPUPARTICLE_CULLING_ON");
-
-                    material.SetBuffer("_inViewsList", data.inViewsAppendBuffer);
+                    _shaderMaterial.EnableKeyword("GPUPARTICLE_CULLING_ON");
+                    _shaderMaterial.SetBuffer("_inViewsList", data.m_inViewsAppendBuffer);
 
                     //data.inViewsCountBuffer.GetData(debugCount);
 
-                    //Graphics.DrawProcedural(MeshTopology.Triangles, meshIndicesNum, data.inViewsNum);   // 視界範囲内のものだけ描画
-                    Graphics.DrawProceduralIndirect(MeshTopology.Triangles, data.inViewsCountBuffer);   // 視界範囲内のものだけ描画
+                    // 描画処理
+                    Graphics.DrawProceduralIndirect(MeshTopology.Triangles, data.m_inViewsCountBuffer);
 
                     //Debug.Log(name + " [0] " + debugCount[0] + " [1] " + debugCount[1] + " [2] " + debugCount[2] + " [3] " + debugCount[3]);
 
@@ -331,73 +361,85 @@ public class GPUParticleRenderer : MonoBehaviour
         }
         else
         {
+            // シェーダーの値を設定する
             SetMaterialParam();
+            _shaderMaterial.DisableKeyword("GPUPARTICLE_CULLING_ON");
 
-            material.DisableKeyword("GPUPARTICLE_CULLING_ON");
-
-            //Graphics.DrawProcedural(MeshTopology.Triangles, meshIndicesNum, particle.GetActiveParticleNum());   // Activeなものをすべて描画
-            Graphics.DrawProceduralIndirect(MeshTopology.Triangles, particle.GetParticleCountBuffer());   // 視界範囲内のものだけ描画
+            // 描画処理
+            Graphics.DrawProceduralIndirect(MeshTopology.Triangles, m_particle.GetParticleCountBuffer());
 
         }
     }
 
+    // バッファの解放処理
+    void ReleaseBuffer()
+    {
+        m_cameraDatas.Values.Where(d => d != null).ToList().ForEach(d => d.Release());
+        m_cameraDatas.Clear();
+        if (m_meshIndicesBuffer != null)
+        {
+            m_meshIndicesBuffer.Release();
+            m_meshIndicesBuffer = null;
+        }
+        if (m_meshVertexDataBuffer != null)
+        {
+            m_meshVertexDataBuffer.Release();
+            m_meshVertexDataBuffer = null;
+        }
+    }
+    #endregion
+
+    void Start()
+    {
+        // GPUパーティクルを取得する
+        m_particle = GetComponent<GPUParticleManager>();
+
+        // GPUパーティクルが見つかったか判定する
+        if (m_particle != null)
+        {
+            // GPUパーティクルのデータを取得する
+            m_numParticles = m_particle.GetParticleNum();
+            m_particlesBuffer = m_particle.GetParticleBuffer();
+            m_activeIndexBuffer = m_particle.GetActiveParticleBuffer();
+            m_activeCountBuffer = m_particle.GetParticleCountBuffer();
+            //Debug.Log("particleNum " + particleNum);
+        }
+        else
+        {
+            Debug.LogError("Particle Class Not Found!!" + typeof(GPUParticleManager).FullName);
+        }
+
+        // メッシュデータのバッファの初期化処理
+        InitMeshDataBuffer(_mesh, out m_meshVertexDataBuffer, out m_meshIndicesBuffer, out m_numMeshIndices);
+    }
+
     void OnRenderObject()
     {
-        if ((Camera.current.cullingMask & (1 << gameObject.layer)) == 0)
-            return;
-
+        // 
+        if ((Camera.current.cullingMask & (1 << gameObject.layer)) == 0) return;
+        // GPUでオブジェクトを描画する
         OnRenderObjectInternal();
     }
 
     void LateUpdate()
     {
-        if (isCulling)
+        // カリングを行うか判定
+        if (_isCulling)
         {
-            //Dictionary<Camera, CullingData>.KeyCollection keys = cameraDatas.Keys;
-            //int count = keys.Count;
-            Camera[] cameras = cameraDatas.Keys.ToArray();
+            // カリングを行うカメラを取得する
+            Camera[] cameras = m_cameraDatas.Keys.ToArray();
+            // 頂点データバッファの更新処理
             for (int i = cameras.Length - 1; i >= 0; i--)
             {
                 if (cameras[i] == null)
                 {
-                    cameraDatas.Remove(cameras[i]);
+                    m_cameraDatas.Remove(cameras[i]);
                 }
                 else if (cameras[i].isActiveAndEnabled)
                 {
-                    UpdateVertexBuffer(cameras[i]);
+                    UpdateVertexDataBuffer(cameras[i]);
                 }
             }
-            //keys = cameraDatas.Keys;
-            //			foreach (Camera cam in keys) {
-            //				if(cam.isActiveAndEnabled){
-            //					UpdateVertexBuffer(cam);
-            //				}
-            //			}
-
-            ////
-            //            cameraDatas.Keys.Where(cam => cam == null).ToList().ForEach(cam => cameraDatas.Remove(cam));
-            //            cameraDatas.Keys
-            //                .Where(cam => cam.isActiveAndEnabled)
-            //                .ToList().ForEach(cam =>
-            //                {
-            //                    UpdateVertexBuffer(cam);
-            //                });
-        }
-    }
-
-    void ReleaseBuffer()
-    {
-        cameraDatas.Values.Where(d => d != null).ToList().ForEach(d => d.Release());
-        cameraDatas.Clear();
-        if (meshIndicesBuffer != null)
-        {
-            meshIndicesBuffer.Release();
-            meshIndicesBuffer = null;
-        }
-        if (meshVertexBuffer != null)
-        {
-            meshVertexBuffer.Release();
-            meshVertexBuffer = null;
         }
     }
 

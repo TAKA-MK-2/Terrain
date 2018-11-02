@@ -53,7 +53,9 @@ void CheckCameraCulling(uint3 id : SV_DispatchThreadID)
 	// パーティクルの番号を取得
 	uint particleIndex = _particleActiveList[idx];
 
-	if (particleIndex < _numParticles) {
+	if (particleIndex < _numParticles) 
+	{
+		// GPUパーティクルのデータを取得
 		GPUParticleData data = _particlesBuffer[particleIndex];
 
 		// CheckCulling!
