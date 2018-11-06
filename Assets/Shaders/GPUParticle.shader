@@ -95,7 +95,8 @@
 			finalPosition = tv0;
 		}
 		v2f o;
-		o.pos = mul(UNITY_MATRIX_P, mul(UNITY_MATRIX_MV, pos) + float4(pos.x, pos.y, 0, 0));
+		//o.pos = mul(UNITY_MATRIX_P, mul(UNITY_MATRIX_MV, pos) + float4(pos.x, pos.y, 0, 0));
+		o.pos = mul(UNITY_MATRIX_P, mul(UNITY_MATRIX_MV, float4(0, 0, 0, 1)) + float4(pos.x, pos.y, 0, 0));
 		o.uv = uv;
 		o.color = float4(1, 1, 1, 1);
 		
@@ -119,7 +120,7 @@
 			Pass
 		{
 			Name "DEFERRED"
-			Blend OneMinusDstColor One // soft additive
+			//Blend OneMinusDstColor One // soft additive
 			Lighting Off
 			ZWrite Off
 			Cull Off
