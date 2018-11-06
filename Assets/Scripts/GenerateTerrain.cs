@@ -99,7 +99,7 @@ public class GenerateTerrain : MonoBehaviour
         float time = Time.realtimeSinceStartup;
         // 頂点の計算
         CalculateVertex();
-        Debug.Log(Time.realtimeSinceStartup - time);
+        //Debug.Log(Time.realtimeSinceStartup - time);
 
         // 三角形の計算
         CalculateTriangle();
@@ -124,7 +124,7 @@ public class GenerateTerrain : MonoBehaviour
         m_computeShader.SetFloat("_smoothness", m_smoothness);
         m_computeShader.SetVector("_offset", new Vector2(m_offsetX, m_offsetY));
         // コンピュートシェーダーの実行時グループ数
-        int numThreadGroups = Mathf.CeilToInt(m_size / 32.0f);
+        int numThreadGroups = Mathf.CeilToInt(m_size / 1);
         // コンピュートシェーダーを実行する
         m_computeShader.Dispatch(mainKernelID, numThreadGroups, 1, numThreadGroups);
         // バッファからデータを受け取る
