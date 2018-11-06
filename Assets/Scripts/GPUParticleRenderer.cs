@@ -1,6 +1,4 @@
-﻿using System.Collections;
-using System.Collections.Generic;
-using System.IO;
+﻿using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.InteropServices;
 using UnityEngine;
@@ -11,12 +9,14 @@ public class GPUParticleRenderer : MonoBehaviour
     #region define
     public class CullingData
     {
+        // クラス外からアクセス可能
+        #region public
         // ビュー内の追加バッファ
         public ComputeBuffer m_inViewsAppendBuffer;
         // inViewsAppendBufferの個数バッファ
         public ComputeBuffer m_inViewsCountBuffer;
         // [0]インスタンスあたりの頂点数 [1]インスタンス数 [2]開始する頂点位置 [3]開始するインスタンス
-        public int[] inViewsCounts = { 0, 1, 0, 0 };
+        public int[] m_inViewsCounts = { 0, 1, 0, 0 };
 
         // コンストラクタ
         public CullingData(int _numParticles)
@@ -29,13 +29,13 @@ public class GPUParticleRenderer : MonoBehaviour
             m_inViewsAppendBuffer.SetCounterValue(0);
 
             // バッファにデータを設定する
-            m_inViewsCountBuffer.SetData(inViewsCounts);
+            m_inViewsCountBuffer.SetData(m_inViewsCounts);
         }
 
         // 頂点数を設定する
         public void SetVertexCount(int num)
         {
-            inViewsCounts[0] = num;
+            m_inViewsCounts[0] = num;
         }
 
         // バッファの解放処理
@@ -52,141 +52,118 @@ public class GPUParticleRenderer : MonoBehaviour
                 m_inViewsCountBuffer = null;
             }
         }
+        #endregion
 
-        private int[] debugCount = { 0, 0, 0, 0 };
-
-        // 視界内のパーティクルの数を取得（デバッグ機能）
-        public int GetInViewNum()
-        {
-            m_inViewsCountBuffer.GetData(debugCount);
-            return debugCount[1];
-        }
-
+        // 定数
+        #region define
         // ComputeShaderのスレッド数
         const int NUM_THREAD_X = 32;
+        #endregion
 
+        // メンバ変数
+        #region member variable
         // 平面
-        private Plane[] _planes = new Plane[4];
+        private Plane[] m_planes = new Plane[4];
         // 4x3
-        private float[] _normalsFloat = new float[12];
+        private float[] m_normalsFloat = new float[12];
         Vector3 temp;
+        #endregion
 
-        private void CalculateFrustumPlanes(Matrix4x4 mat, ref Plane[] planes)
+        // メンバ関数
+        #region method
+        // 視錐台を計算する
+        private void CalculateFrustumPlanes(Matrix4x4 _mat, ref Plane[] _planes)
         {
             // left
-            temp.x = mat.m30 + mat.m00;
-            temp.y = mat.m31 + mat.m01;
-            temp.z = mat.m32 + mat.m02;
-            planes[0].normal = temp;
-            //planes[0].distance = mat.m33 + mat.m03;
+            temp.x = _mat.m30 + _mat.m00;
+            temp.y = _mat.m31 + _mat.m01;
+            temp.z = _mat.m32 + _mat.m02;
+            _planes[0].normal = temp;
 
             // right
-            temp.x = mat.m30 - mat.m00;
-            temp.y = mat.m31 - mat.m01;
-            temp.z = mat.m32 - mat.m02;
-            planes[1].normal = temp;
-            //planes[1].distance = mat.m33 - mat.m03;
+            temp.x = _mat.m30 - _mat.m00;
+            temp.y = _mat.m31 - _mat.m01;
+            temp.z = _mat.m32 - _mat.m02;
+            _planes[1].normal = temp;
 
             // bottom
-            temp.x = mat.m30 + mat.m10;
-            temp.y = mat.m31 + mat.m11;
-            temp.z = mat.m32 + mat.m12;
-            planes[2].normal = temp;
-            //planes[2].distance = mat.m33 + mat.m13;
+            temp.x = _mat.m30 + _mat.m10;
+            temp.y = _mat.m31 + _mat.m11;
+            temp.z = _mat.m32 + _mat.m12;
+            _planes[2].normal = temp;
 
             // top
-            temp.x = mat.m30 - mat.m10;
-            temp.y = mat.m31 - mat.m11;
-            temp.z = mat.m32 - mat.m12;
-            planes[3].normal = temp;
-            //planes[3].normal = new Vector3(mat.m30 - mat.m10, mat.m31 - mat.m11, mat.m32 - mat.m12);
-            //planes[3].distance = mat.m33 - mat.m13;
-
-            //// near
-            //planes[4].normal = new Vector3(mat.m30 + mat.m20, mat.m31 + mat.m21, mat.m32 + mat.m22);
-            //planes[4].distance = mat.m33 + mat.m23;
-
-            //// far
-            //planes[5].normal = new Vector3(mat.m30 - mat.m20, mat.m31 - mat.m21, mat.m32 - mat.m22);
-            //planes[5].distance = mat.m33 - mat.m23;
+            temp.x = _mat.m30 - _mat.m10;
+            temp.y = _mat.m31 - _mat.m11;
+            temp.z = _mat.m32 - _mat.m12;
+            _planes[3].normal = temp;
 
             // normalize
-            for (uint i = 0; i < planes.Length; i++)
+            for (uint i = 0; i < _planes.Length; i++)
             {
-                float length = planes[i].normal.magnitude;
-                temp = planes[i].normal;
+                float length = _planes[i].normal.magnitude;
+                temp = _planes[i].normal;
                 temp.x /= length;
                 temp.y /= length;
                 temp.z /= length;
-                planes[i].normal = temp;
-                //planes[i].normal /= length;
-                //planes[i].distance /= length;
+                _planes[i].normal = temp;
             }
         }
 
-        public void Update(ComputeShader cs, Camera camera, int particleNum, ComputeBuffer particleBuffer, ComputeBuffer activeList)
+        // 更新処理
+        public void Update(ComputeShader _computeShader, Camera _camera, int _numParticles, ComputeBuffer _particleBuffer, ComputeBuffer _activeList)
         {
-            int kernel = cs.FindKernel("CheckCameraCulling");
+            // カーネル
+            int kernel = _computeShader.FindKernel("CheckCameraCulling");
 
-            CalculateFrustumPlanes(camera.projectionMatrix * camera.worldToCameraMatrix, ref _planes);
+            // 視錘台を計算する
+            CalculateFrustumPlanes(_camera.projectionMatrix * _camera.worldToCameraMatrix, ref m_planes);
+
+            // 視錘台の法線を分解
             for (int i = 0; i < 4; i++)
             {
-                //Debug.DrawRay(camera.transform.position, _planes[i].normal * 10f, Color.yellow);
-                _normalsFloat[i + 0] = _planes[i].normal.x;
-                _normalsFloat[i + 4] = _planes[i].normal.y;
-                _normalsFloat[i + 8] = _planes[i].normal.z;
+                Debug.DrawRay(_camera.transform.position, m_planes[i].normal * 10f, Color.yellow);
+                m_normalsFloat[i + 0] = m_planes[i].normal.x;
+                m_normalsFloat[i + 4] = m_planes[i].normal.y;
+                m_normalsFloat[i + 8] = m_planes[i].normal.z;
             }
+
+            // 追加バッファのカウンタを0にする
             m_inViewsAppendBuffer.SetCounterValue(0);
 
-            var cPos = camera.transform.position;
-            cs.SetFloats("_CameraPos", cPos.x, cPos.y, cPos.z);
+            // カメラの座標
+            Vector3 cameraPosition = _camera.transform.position;
 
-            cs.SetInt("_numParticles", particleNum);
-            cs.SetFloats("_cameraFrustumNormals", _normalsFloat);
-            cs.SetBuffer(kernel, "_inViewAppend", m_inViewsAppendBuffer);
-            cs.SetBuffer(kernel, "_particlesBuffer", particleBuffer);
-            cs.SetBuffer(kernel, "_particleActiveList", activeList);
-            cs.Dispatch(kernel, Mathf.CeilToInt((float)activeList.count / NUM_THREAD_X), 1, 1);
+            // コンピュートシェーダーの変数を設定する
+            _computeShader.SetFloats("_cameraPosition", cameraPosition.x, cameraPosition.y, cameraPosition.z);
+            _computeShader.SetInt("_numParticles", _numParticles);
+            _computeShader.SetFloats("_cameraFrustumNormals", m_normalsFloat);
+            _computeShader.SetBuffer(kernel, "_inViewAppend", m_inViewsAppendBuffer);
+            _computeShader.SetBuffer(kernel, "_particlesBuffer", _particleBuffer);
+            _computeShader.SetBuffer(kernel, "_particleActiveList", _activeList);
 
-            m_inViewsCountBuffer.SetData(inViewsCounts);
+            // コンピュートシェーダーを実行する
+            _computeShader.Dispatch(kernel, Mathf.CeilToInt((float)_activeList.count / NUM_THREAD_X), 1, 1);
+
+            // コンピュートバッファにデータを設定する
+            m_inViewsCountBuffer.SetData(m_inViewsCounts);
+
+            // コンピュートバッファのカウントをコピーする
             ComputeBuffer.CopyCount(m_inViewsAppendBuffer, m_inViewsCountBuffer, 4);    // インスタンス数
-            //inViewsCountBuffer.GetData(inViewsCounts);
-            //inViewsNum = inViewsCounts[0];
-            //Debug.Log("inViewsCounts " + inViewsCounts[0]);
+            //Debug.Log("inViewsCounts " + m_inViewsCounts[0]);
 
             // debug
-            //if (Input.GetKeyDown(KeyCode.M))
-            //{
-            //    //inViewsCountBuffer.GetData(inViewsCounts);
-            //    //Debug.Log("inViewsCounts " + inViewsCounts[0]);
-
-            //    DumpAppendData(inViewsAppendBuffer, particleNum, "inviews");
-
-            //    DumpAppendData(activeList, particleNum, "activeList");
-            //}
-
-        }
-
-        void DumpAppendData(ComputeBuffer cb, int size, string name)
-        {
-            var data = new uint[size];
-            cb.GetData(data);
-            StreamWriter sw;
-            FileInfo fi;
-            string date = System.DateTime.Now.ToString("yyyyMMddHHmmss");
-            fi = new FileInfo(Application.dataPath + "/../" + name + date + ".csv");
-            sw = fi.AppendText();
-            for (int i = 0; i < data.Length; i++)
+            if (Input.GetKeyDown(KeyCode.M))
             {
-                //Debug.Log("[" + i + "] GridHash " + gridHashDataArray[i] + " index " + sortedIndexDataArray[i]);
-                //sw.WriteLine("" + i + "," + debugData[i].isActive + "," + debugData[i].position + "," + debugData[i].velocity + "," + debugData[i].rotation + "," + debugData[i].animeTime + "," + debugData[i].speed + "," + debugData[i].offsetLimit);
-                sw.WriteLine("" + i + "," + data[i]);
+                m_inViewsCountBuffer.GetData(m_inViewsCounts);
+                //Debug.Log("inViewsCounts " + m_inViewsCounts[0]);
             }
-            sw.Flush();
-            sw.Close();
-            Debug.Log("Dump AppendBuffer Data " + fi.FullName);
+
         }
+        #endregion
     }
+
+    // 頂点情報
     struct VertexData
     {
         public Vector3 vertex;
@@ -215,6 +192,11 @@ public class GPUParticleRenderer : MonoBehaviour
     [SerializeField] Vector3 _rotationOffsetAxis = Vector3.right;
     // 回転の角度
     [SerializeField] float _rotationOffsetAngle = 0;
+    #endregion
+
+    // デバッグ用
+    #region debug
+    private int[] m_debugCount = { 0, 0, 0, 0 };
     #endregion
 
     // メンバ変数
@@ -257,7 +239,7 @@ public class GPUParticleRenderer : MonoBehaviour
         // 頂点データを取得
         VertexData[] vertexDataArray = Enumerable.Range(0, _mesh.vertexCount).Select(b =>
         {
-            Debug.Log("b: " + b + " / " + _mesh.vertexCount);
+            //Debug.Log("b: " + b + " / " + _mesh.vertexCount);
             return new VertexData()
             {
                 vertex = _mesh.vertices[b],
@@ -349,12 +331,12 @@ public class GPUParticleRenderer : MonoBehaviour
                     _shaderMaterial.EnableKeyword("GPUPARTICLE_CULLING_ON");
                     _shaderMaterial.SetBuffer("_inViewsList", data.m_inViewsAppendBuffer);
 
-                    //data.inViewsCountBuffer.GetData(debugCount);
+                    data.m_inViewsCountBuffer.GetData(m_debugCount);
 
                     // 描画処理
                     Graphics.DrawProceduralIndirect(MeshTopology.Triangles, data.m_inViewsCountBuffer);
 
-                    //Debug.Log(name + " [0] " + debugCount[0] + " [1] " + debugCount[1] + " [2] " + debugCount[2] + " [3] " + debugCount[3]);
+                    //Debug.Log(name + " [0] " + m_debugCount[0] + " [1] " + m_debugCount[1] + " [2] " + m_debugCount[2] + " [3] " + m_debugCount[3]);
 
                 }
             }
@@ -413,14 +395,6 @@ public class GPUParticleRenderer : MonoBehaviour
         InitMeshDataBuffer(_mesh, out m_meshVertexDataBuffer, out m_meshIndicesBuffer, out m_numMeshIndices);
     }
 
-    void OnRenderObject()
-    {
-        // 
-        if ((Camera.current.cullingMask & (1 << gameObject.layer)) == 0) return;
-        // GPUでオブジェクトを描画する
-        OnRenderObjectInternal();
-    }
-
     void LateUpdate()
     {
         // カリングを行うか判定
@@ -441,6 +415,14 @@ public class GPUParticleRenderer : MonoBehaviour
                 }
             }
         }
+    }
+
+    void OnRenderObject()
+    {
+        // 
+        if ((Camera.current.cullingMask & (1 << gameObject.layer)) == 0) return;
+        // GPUでオブジェクトを描画する
+        OnRenderObjectInternal();
     }
 
     void OnDestroy()

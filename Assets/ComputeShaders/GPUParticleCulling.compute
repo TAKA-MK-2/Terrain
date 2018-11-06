@@ -33,7 +33,7 @@ struct GPUParticleData
 int _numParticles;
 
 // カメラ座標
-float3 _cameraPos;
+float3 _cameraPosition;
 // カメラの視錐台の法線
 float4x3 _cameraFrustumNormals;
 
@@ -59,7 +59,7 @@ void CheckCameraCulling(uint3 id : SV_DispatchThreadID)
 		GPUParticleData data = _particlesBuffer[particleIndex];
 
 		// CheckCulling!
-		float3 posFromCamera = data.position - _cameraPos;
+		float3 posFromCamera = data.position - _cameraPosition;
 		float scale = data.scale;
 
 		if (data.isActive &&

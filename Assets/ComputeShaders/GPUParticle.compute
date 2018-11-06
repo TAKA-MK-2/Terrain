@@ -126,7 +126,7 @@ void Update(uint3 id : SV_DispatchThreadID)
 		_particles[no].rotation += _particles[no].angVelocity * _deltaTime;
 		_particles[no].scale = (pow(_particles[no].elapsedTime / _particles[no].lifeTime, 3.0)) * (_particles[no].endScale - _particles[no].startScale) + _particles[no].startScale;
 		_particles[no].elapsedTime += _deltaTime;
-		if (_particles[no].lifeTime <= _particles[no].elapsedTime)
+		if (_particles[no].lifeTime < _particles[no].elapsedTime)
 		{
 			_particles[no].isActive = false;
 			_deadList.Append(no);

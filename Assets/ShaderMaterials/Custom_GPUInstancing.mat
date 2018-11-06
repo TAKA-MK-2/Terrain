@@ -9,7 +9,7 @@ Material:
   m_PrefabAsset: {fileID: 0}
   m_Name: Custom_GPUInstancing
   m_Shader: {fileID: 4800000, guid: e64ef8d4171c0cd499a110357f4ee4b2, type: 3}
-  m_ShaderKeywords: GPUPARTICLE_CULLING_ON
+  m_ShaderKeywords: 
   m_LightmapFlags: 4
   m_EnableInstancingVariants: 0
   m_DoubleSidedGI: 0
