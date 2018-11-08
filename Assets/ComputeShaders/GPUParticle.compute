@@ -26,6 +26,8 @@ struct GPUParticleData
 	float startScale;
 	// 最終スケール
 	float endScale;
+	// 色
+	float4 color;
 	// 生存時間
 	float lifeTime;
 	// 経過時間
@@ -66,8 +68,10 @@ float _elapsedTime;
 float3 _range;
 // エミットの方向
 float3 _direction;
-// 速度
-float3 _velocity;
+// 最低速度
+float3 _minVelocity;
+// 最高速度
+float3 _maxVelocity;
 // 重力
 float _gravity;
 // 角速度
@@ -76,6 +80,8 @@ float3 _angVelocity;
 float _startScale;
 // 最終スケール
 float _endScale;
+// 色情報
+float3 _color;
 // 生存時間
 float _lifeTime;
 // 彩度
@@ -107,11 +113,12 @@ void Emit()
 
 	_particles[no].isActive = true;
 	_particles[no].position = _position + (position * _range);
-	_particles[no].velocity = _velocity * velocity;
+	_particles[no].velocity = (_maxVelocity - _minVelocity) * abs(velocity) + _minVelocity;
 	_particles[no].rotation = _angVelocity * rotation;
 	_particles[no].angVelocity = _angVelocity * rotation;
 	_particles[no].startScale = startScale;
 	_particles[no].endScale = endScale;
+	_particles[no].color = float4(_color, 1);
 	_particles[no].lifeTime = _lifeTime * rnd(seed + 3);
 	_particles[no].elapsedTime = 0;
 }

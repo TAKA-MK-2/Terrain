@@ -37,6 +37,8 @@
 		 float startScale;
 		 // 最終スケール
 		 float endScale;
+		 // 色
+		 float4 color;
 		 // 生存時間
 		 float lifeTime;
 		 // 経過時間
@@ -73,39 +75,28 @@
 		float3 normal = _vertices[idx].normal;
 		float4 tangent = _vertices[idx].tangent;
 
-		//float4 Q = getAngleAxisRotation(_RotationOffsetAxis.xyz, _RotationOffsetAxis.w);
+		float4 Q = getAngleAxisRotation(_RotationOffsetAxis.xyz, _RotationOffsetAxis.w);
 
 		uint iidx = GetParticleIndex(iid);
 
-		//float4 rotation = qmul(float4(_particles[iidx].rotation, 1), Q);
-		float4 rotation = getAngleAxisRotation(_RotationOffsetAxis.xyz, _RotationOffsetAxis.w);
+		float4 rotation = qmul(float4(_particles[iidx].rotation, 1), Q);
+		//float4 rotation = getAngleAxisRotation(_RotationOffsetAxis.xyz, _RotationOffsetAxis.w);
 
 		pos.xyz *= _particles[iidx].scale;
 		pos.xyz = rotateWithQuaternion(pos.xyz, rotation);
 		pos.xyz += _particles[iidx].position;
 
-		float3 diff = _upVec * _particles[iidx].scale;
-		float3 finalPosition;
-		float3 tv0 = pos;
-		{
-			float3 eyeVector = ObjSpaceViewDir(float4(tv0, 0));
-			float3 sideVector = normalize(cross(eyeVector, diff));
-			tv0 += (uv.x - 0.5f) * sideVector * _particles[iidx].scale;
-			tv0 += (uv.y - 0.5f) * diff;
-			finalPosition = tv0;
-		}
 		v2f o;
 		//o.pos = mul(UNITY_MATRIX_P, mul(UNITY_MATRIX_MV, pos) + float4(pos.x, pos.y, 0, 0));
-		o.pos = mul(UNITY_MATRIX_P, mul(UNITY_MATRIX_MV, float4(0, 0, 0, 1)) + float4(pos.x, pos.y, 0, 0));
+		o.pos = mul(UNITY_MATRIX_P, mul(UNITY_MATRIX_MV, float4(0, 0, pos.z, 1)) + float4(pos.x, pos.y, 0, 0));
 		o.uv = uv;
-		o.color = float4(1, 1, 1, 1);
+		o.color = _particles[iidx].color;
 		
 		return o;
 	}
 
 	fixed4  frag(v2f i) : SV_Target
 	{
-
 		fixed4 col = tex2D(_MainTex, i.uv) * i.color;
 		return col;
 	}
@@ -120,7 +111,7 @@
 			Pass
 		{
 			Name "DEFERRED"
-			//Blend OneMinusDstColor One // soft additive
+			Blend OneMinusDstColor One // soft additive
 			Lighting Off
 			ZWrite Off
 			Cull Off

@@ -73,7 +73,7 @@ float fBm(float2 st)
 }
 
 
-[numthreads(32,1,32)]
+[numthreads(1,1,1)]
 void CSMain(uint3 id : SV_DispatchThreadID)
 {
 	if (id.x <= _size && id.z <= _size)
@@ -81,7 +81,7 @@ void CSMain(uint3 id : SV_DispatchThreadID)
 		int index = (id.z * _size) + id.x;
 		float3 vertex;
 		vertex.x = id.x * _distance;
-		vertex.y = _height * (fBm(float2(id.x + _offset.x, id.z + _offset.y) * _smoothness));
+		vertex.y = _height * (perlinNoise(float2(id.x + _offset.x, id.z + _offset.y) * _smoothness));
 		vertex.z = id.z * _distance;
 		_vertices[index] = vertex;
 	}

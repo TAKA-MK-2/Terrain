@@ -21,6 +21,8 @@ struct GPUParticleData
 	float startScale;
 	// 最終スケール
 	float endScale;
+	// 色
+	float4 color;
 	// 生存時間
 	float lifeTime;
 	// 経過時間

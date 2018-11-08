@@ -52,9 +52,11 @@ namespace Utility
             _position,
             _range,
             _direction,
-            _velocity,
+            _minVelocity,
+            _maxVelocity,
             _angVelocity,
             _rotationOffsetAxis,
+            _color,
             
             _length
         }

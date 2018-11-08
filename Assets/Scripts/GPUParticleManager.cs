@@ -22,6 +22,8 @@ public struct GPUParticleData
     public float startScale;
     // 最終スケール
     public float endScale;
+    // 色
+    public Vector4 color;
     // 生存時間
     public float lifeTime;
     // 経過時間
@@ -46,10 +48,10 @@ public class GPUParticleManager : MonoBehaviour
     [SerializeField] int _numMaxEmitParticles = 1024;
     // エミッッターのサイズ
     [SerializeField] Vector3 _range = Vector3.zero;
-    // エミットの方向
-    [SerializeField] Vector3 _direction = Vector3.up;
-    // 速度
-    [SerializeField] Vector3 _velocity = Vector3.zero;
+    // 最低速度
+    [SerializeField] Vector3 _minVelocity = Vector3.zero;
+    // 最高速度
+    [SerializeField] Vector3 _maxVelocity = Vector3.up;
     // 重力
     [SerializeField] float _gravity = 2f;
     // 角速度
@@ -58,14 +60,10 @@ public class GPUParticleManager : MonoBehaviour
     [SerializeField] float _startScale = 1;
     // 最終スケール
     [SerializeField] float _endScale = 2;
+    // 色情報
+    [SerializeField] Vector3 _color = Vector4.one;
     // 生存時間
     [SerializeField] float _lifeTime = 1;
-    // 彩度
-    [Range(0, 1)]
-    [SerializeField] float _sai = 1;
-    // 明るさ
-    [Range(0, 1)]
-    [SerializeField] float _val = 1;
     // カメラ
     [SerializeField] Camera _camera;
     #endregion
@@ -220,15 +218,14 @@ public class GPUParticleManager : MonoBehaviour
 
         // コンピュートシェーダーの変数の設定
         _computeShader.SetVector(ShaderDefines.GetVectorPropertyID(ShaderDefines.VectorID._range), _range);
-        _computeShader.SetVector(ShaderDefines.GetVectorPropertyID(ShaderDefines.VectorID._direction), _direction);
-        _computeShader.SetVector(ShaderDefines.GetVectorPropertyID(ShaderDefines.VectorID._velocity), _velocity);
+        _computeShader.SetVector(ShaderDefines.GetVectorPropertyID(ShaderDefines.VectorID._minVelocity), _minVelocity);
+        _computeShader.SetVector(ShaderDefines.GetVectorPropertyID(ShaderDefines.VectorID._maxVelocity), _maxVelocity);
         _computeShader.SetFloat(ShaderDefines.GetFloatPropertyID(ShaderDefines.FloatID._gravity), _gravity);
         _computeShader.SetVector(ShaderDefines.GetVectorPropertyID(ShaderDefines.VectorID._angVelocity), _angVelocity * Mathf.Deg2Rad);
         _computeShader.SetFloat(ShaderDefines.GetFloatPropertyID(ShaderDefines.FloatID._startScale), _startScale);
         _computeShader.SetFloat(ShaderDefines.GetFloatPropertyID(ShaderDefines.FloatID._endScale), _endScale);
+        _computeShader.SetVector(ShaderDefines.GetVectorPropertyID(ShaderDefines.VectorID._color), _color);
         _computeShader.SetFloat(ShaderDefines.GetFloatPropertyID(ShaderDefines.FloatID._lifeTime), _lifeTime);
-        _computeShader.SetFloat(ShaderDefines.GetFloatPropertyID(ShaderDefines.FloatID._sai), _sai);
-        _computeShader.SetFloat(ShaderDefines.GetFloatPropertyID(ShaderDefines.FloatID._val), _val);
         _computeShader.SetVector(ShaderDefines.GetVectorPropertyID(ShaderDefines.VectorID._position), _position);
         _computeShader.SetFloat(ShaderDefines.GetFloatPropertyID(ShaderDefines.FloatID._elapsedTime), Time.time);
 
@@ -272,14 +269,6 @@ public class GPUParticleManager : MonoBehaviour
         }
     }
     #endregion
-
-    void OnValidate()
-    {
-        // エミット方向の値を-1～1にする
-        _direction.x = Mathf.Clamp(_direction.x, -1, 1);
-        _direction.y = Mathf.Clamp(_direction.y, -1, 1);
-        _direction.z = Mathf.Clamp(_direction.z, -1, 1);
-    }
 
     void Awake()
     {
