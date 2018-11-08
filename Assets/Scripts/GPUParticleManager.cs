@@ -43,9 +43,9 @@ public class GPUParticleManager : MonoBehaviour
     // コンピュートシェーダー
     [SerializeField] ComputeShader _computeShader;
     // 最大パーティクル数
-    [SerializeField] int _numMaxParticles = 1048576;
+    [SerializeField] int _numMaxParticles = 1024;
     // エミット数
-    [SerializeField] int _numMaxEmitParticles = 1024;
+    [SerializeField] int _numMaxEmitParticles = 32;
     // エミッッターのサイズ
     [SerializeField] Vector3 _range = Vector3.zero;
     // 最低速度
@@ -101,20 +101,19 @@ public class GPUParticleManager : MonoBehaviour
 
     // デバッグ用
     #region debug
-    private int[] debugCounts = { 0, 0, 0, 0 };
+    private int[] m_debugCounts = { 0, 0, 0, 0 };
+    // アクティブなパーティクルの数を取得（デバッグ機能）
+    public int GetActiveParticleNum()
+    {
+        m_particleActiveCountBuffer.GetData(m_debugCounts);
+        return m_debugCounts[1];
+    }
     #endregion
 
     // ゲッター
     #region get
     // パーティクル数を取得する
     public int GetParticleNum() { return m_numParticles; }
-
-    // アクティブなパーティクルの数を取得（デバッグ機能）
-    public int GetActiveParticleNum()
-    {
-        m_particleActiveCountBuffer.GetData(debugCounts);
-        return debugCounts[1];
-    }
 
     // パーティクル構造体のバッファを取得する
     public ComputeBuffer GetParticleBuffer() { return m_particlesBuffer; }
@@ -210,7 +209,7 @@ public class GPUParticleManager : MonoBehaviour
         m_particlePoolCountBuffer.SetData(m_particleCounts);
         ComputeBuffer.CopyCount(m_particlePoolBuffer, m_particlePoolCountBuffer, 0);
         m_particlePoolCountBuffer.GetData(m_particleCounts);
-        //Debug.Log("EmitParticle Pool Num " + m_particleCounts[0] + " position " + position);
+        //Debug.Log("EmitParticle Pool Num " + m_particleCounts[0] + " position " + _position);
         m_particlePoolNum = m_particleCounts[0];
 
         // エミット数未満なら発生させない

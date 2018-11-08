@@ -1,8 +1,10 @@
-﻿// Each #kernel tells which function to compile; you can have many kernels
+﻿// カリングを判定する
 #pragma kernel CheckCameraCulling
 
+// スレッド数
 #define THREAD_NUM_X 32
 
+// GPUパーティクル情報
 struct GPUParticleData
 {
 	// アクティブか判断する
@@ -29,36 +31,47 @@ struct GPUParticleData
 	float elapsedTime;
 };
 
-int _ParticleNum;
+// パーティクル数
+int _numParticles;
 
-float3 _CameraPos;
-float4x3 _CameraFrustumNormals;
-StructuredBuffer<GPUParticleData> _ParticleBuffer;
-AppendStructuredBuffer<uint> _InViewAppend;
-StructuredBuffer<uint> _ParticleActiveList;
+// カメラ座標
+float3 _cameraPosition;
+// カメラの視錐台の法線
+float4x3 _cameraFrustumNormals;
+
+// GPUパーティクルのバッファ
+StructuredBuffer<GPUParticleData> _particlesBuffer;
+// 写っているパーティクルリストのバッファ
+AppendStructuredBuffer<uint> _inViewAppend;
+// アクティブ状態のパーティクルの番号のバッファ
+StructuredBuffer<uint> _particleActiveList;
 
 [numthreads(THREAD_NUM_X, 1, 1)]
 void CheckCameraCulling(uint3 id : SV_DispatchThreadID)
 {
+	// スレッドの番号を取得
 	uint idx = id.x;
+	
+	// パーティクルの番号を取得
+	uint particleIndex = _particleActiveList[idx];
 
-	uint particleIndex = _ParticleActiveList[idx];
-
-	if (particleIndex < _ParticleNum) {
-		GPUParticleData data = _ParticleBuffer[particleIndex];
+	if (particleIndex < _numParticles) 
+	{
+		// GPUパーティクルのデータを取得
+		GPUParticleData data = _particlesBuffer[particleIndex];
 
 		// CheckCulling!
-		float3 posFromCamera = data.position - _CameraPos;
+		float3 posFromCamera = data.position - _cameraPosition;
 		float scale = data.scale;
 
 		if (data.isActive &&
-			(dot(_CameraFrustumNormals[0], posFromCamera) > -scale)
-			&& (dot(_CameraFrustumNormals[1], posFromCamera) > -scale)
-			&& (dot(_CameraFrustumNormals[2], posFromCamera) > -scale)
-			&& (dot(_CameraFrustumNormals[3], posFromCamera) > -scale)
+			(dot(_cameraFrustumNormals[0], posFromCamera) > -scale)
+			&& (dot(_cameraFrustumNormals[1], posFromCamera) > -scale)
+			&& (dot(_cameraFrustumNormals[2], posFromCamera) > -scale)
+			&& (dot(_cameraFrustumNormals[3], posFromCamera) > -scale)
 			)
 		{
-			_InViewAppend.Append(particleIndex);
+			_inViewAppend.Append(particleIndex);
 		}
 	}
 }
