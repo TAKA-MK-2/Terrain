@@ -422,6 +422,26 @@ PrefabInstance:
       propertyPath: rotationOffsetAxis.y
       value: 1
       objectReference: {fileID: 0}
+    - target: {fileID: 114003489080467990, guid: 4d83fabd89981e647b66088bbd521b3f,
+        type: 3}
+      propertyPath: _shaderMaterial
+      value: 
+      objectReference: {fileID: 2100000, guid: a07494843f0d28a4b882cfc59b0082ed, type: 2}
+    - target: {fileID: 114003489080467990, guid: 4d83fabd89981e647b66088bbd521b3f,
+        type: 3}
+      propertyPath: _texture
+      value: 
+      objectReference: {fileID: 10300, guid: 0000000000000000f000000000000000, type: 0}
+    - target: {fileID: 114003489080467990, guid: 4d83fabd89981e647b66088bbd521b3f,
+        type: 3}
+      propertyPath: _cullingComputeShader
+      value: 
+      objectReference: {fileID: 7200000, guid: 2fc1eb244aa41e7468df95446d9fe3e0, type: 3}
+    - target: {fileID: 114003489080467990, guid: 4d83fabd89981e647b66088bbd521b3f,
+        type: 3}
+      propertyPath: _mesh
+      value: 
+      objectReference: {fileID: 10210, guid: 0000000000000000e000000000000000, type: 0}
     m_RemovedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 4d83fabd89981e647b66088bbd521b3f, type: 3}
 --- !u!1 &747244443 stripped
