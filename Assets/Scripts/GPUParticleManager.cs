@@ -277,14 +277,6 @@ public class GPUParticleManager : MonoBehaviour
 
     void Update()
     {
-        if (Input.GetKey(KeyCode.Alpha1))
-        {
-            EmitParticle(Vector3.zero);
-        }
-        if (Input.GetKeyDown(KeyCode.Alpha2))
-        {
-            EmitParticle(Vector3.zero);
-        }
         UpdateParticle();
     }
 
