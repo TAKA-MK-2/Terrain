@@ -336,7 +336,7 @@ public class GPUParticleRenderer : MonoBehaviour
                     // 描画処理
                     Graphics.DrawProceduralIndirect(MeshTopology.Triangles, data.m_inViewsCountBuffer);
 
-                    //Debug.Log(name + " [0] " + m_debugCount[0] + " [1] " + m_debugCount[1] + " [2] " + m_debugCount[2] + " [3] " + m_debugCount[3]);
+                    Debug.Log(name + " [0] " + m_debugCount[0] + " [1] " + m_debugCount[1] + " [2] " + m_debugCount[2] + " [3] " + m_debugCount[3]);
 
                 }
             }
