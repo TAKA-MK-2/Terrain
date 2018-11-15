@@ -7,27 +7,35 @@ public class TestEmit : MonoBehaviour
 
     #region SerializeField
     [SerializeField] GPUParticleEmitter _particleEmitter;
+    [SerializeField] List<GameObject> _parents;
     #endregion
 
     #region member variable
-    private bool m_toggle = false;
+    private List<bool> m_toggles;
     #endregion
+
+    void Start()
+    {
+        m_toggles = new List<bool>();
+        for (int i = 0; i < _parents.Count; i++)
+        {
+            m_toggles.Add(false);
+        }
+    }
 
     // Update is called once per frame
     void Update()
     {
-        // 1フレーム
-        if (Input.GetMouseButtonDown(0))
+        for (int i = 0; i < _parents.Count; i++)
         {
-            _particleEmitter.Emit();
-        }
-        if (Input.GetMouseButtonDown(1))
-        {
-            m_toggle = !m_toggle;
-        }
-        if (m_toggle)
-        {
-            _particleEmitter.Emit();
+            if (Input.GetKeyDown(KeyCode.Alpha1 + i))
+            {
+                m_toggles[i] = !m_toggles[i];
+            }
+            if (m_toggles[i])
+            {
+                _particleEmitter.Emit(_parents[i].transform.position);
+            }
         }
     }
 }

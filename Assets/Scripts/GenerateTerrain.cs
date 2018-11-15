@@ -19,7 +19,7 @@ public class GenerateTerrain : MonoBehaviour
     // コンピュートシェーダー
     [SerializeField] ComputeShader m_computeShader;
     // 1辺の頂点数
-    [SerializeField] [Range(64, 255)] int m_numVertice = 160;
+    [SerializeField] [Range(64, 512)] int m_numVertice = 160;
     // 高さ
     [SerializeField] [Range(0.0f, 10.0f)] float m_height = 5.0f;
     // 滑らかさ
@@ -188,5 +188,10 @@ public class GenerateTerrain : MonoBehaviour
     {
         Initialize();
         RegenerateMesh();
+    }
+
+    void OnRenderObject()
+    {
+        
     }
 }
