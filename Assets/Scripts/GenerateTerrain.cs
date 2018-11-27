@@ -51,6 +51,12 @@ public class GenerateTerrain : MonoBehaviour
     private MeshRenderer m_meshRenderer;
     // メッシュコライダー
     private MeshCollider m_meshCollider;
+    // 頂点データバッファ
+    private ComputeBuffer m_vertexBuffer;
+    // メインカーネル
+    private int m_mainKernelID;
+    // スレッドグループ数
+    private int m_numThreadGroups;
     #endregion
 
     /// デバッグ用
@@ -71,14 +77,17 @@ public class GenerateTerrain : MonoBehaviour
         m_meshFilter = gameObject.GetComponent<MeshFilter>();
         m_meshRenderer = gameObject.GetComponent<MeshRenderer>();
         m_meshCollider = gameObject.GetComponent<MeshCollider>();
+        m_vertexBuffer = new ComputeBuffer(m_numVertices, System.Runtime.InteropServices.Marshal.SizeOf(typeof(Vector3)));
+        m_mainKernelID = m_computeShader.FindKernel("CSMain");
+        m_numThreadGroups = Mathf.CeilToInt(m_numVertice);
     }
 
     void RegenerateMesh()
     {
-        float time = Time.realtimeSinceStartup;
+        //float time = Time.realtimeSinceStartup;
         // 頂点の計算
         CalculateVertex();
-        Debug.Log(Time.realtimeSinceStartup - time);
+        //Debug.Log(Time.realtimeSinceStartup - time);
 
         // 三角形の計算
         CalculateTriangle();
@@ -89,14 +98,9 @@ public class GenerateTerrain : MonoBehaviour
 
     void CalculateVertex()
     {
-        // 頂点データを受け取るバッファ
-        ComputeBuffer vertexBuffer = new ComputeBuffer(m_numVertices, System.Runtime.InteropServices.Marshal.SizeOf(typeof(Vector3)));
-       
-        // メインカーネル
-        int mainKernelID = m_computeShader.FindKernel("CSMain");
        
         // バッファを設定
-        m_computeShader.SetBuffer(mainKernelID, "_vertices", vertexBuffer);
+        m_computeShader.SetBuffer(m_mainKernelID, "_vertices", m_vertexBuffer);
 
         // 変数を設定
         m_computeShader.SetInt("_numVertice", m_numVertice);
@@ -105,27 +109,16 @@ public class GenerateTerrain : MonoBehaviour
         m_computeShader.SetFloat("_smoothness", m_smoothness * m_numVertice);
         m_computeShader.SetVector("_offset", new Vector2(m_offsetX, m_offsetY));
 
-        // コンピュートシェーダーの実行時グループ数
-        int numThreadGroups = Mathf.CeilToInt(m_numVertice);
-
         // コンピュートシェーダーを実行する
-        m_computeShader.Dispatch(mainKernelID, numThreadGroups, 1, numThreadGroups);
+        m_computeShader.Dispatch(m_mainKernelID, m_numThreadGroups, 1, m_numThreadGroups);
 
         // バッファからデータを受け取る
         Vector3[] vertexData = new Vector3[m_numVertices];
-        vertexBuffer.GetData(vertexData);
-
-        // バッファを開放する
-        vertexBuffer.Release();
-
-        // 頂点データの初期化
-        m_vertices.Clear();
+        m_vertexBuffer.GetData(vertexData);
 
         // 頂点配列にデータを格納する
-        for (int index = 0; index < m_numVertices; index++)
-        {
-            m_vertices.Add(vertexData[index]);
-        }
+        m_vertices.Clear();
+        m_vertices.AddRange(vertexData);
     }
 
     void CalculateTriangle()
@@ -165,7 +158,7 @@ public class GenerateTerrain : MonoBehaviour
         // メッシュの頂点の再割り当て
         Mesh mesh = new Mesh();
         mesh.SetVertices(m_vertices);
-        mesh.triangles = m_triangles;
+        mesh.SetTriangles(m_triangles, 0);
         // メッシュの法線の再計算
         mesh.RecalculateNormals();
         // メッシュの再設定
@@ -193,5 +186,11 @@ public class GenerateTerrain : MonoBehaviour
     void OnRenderObject()
     {
         
+    }
+
+    void OnDestroy()
+    {
+        // バッファを開放する
+        m_vertexBuffer.Release();
     }
 }
