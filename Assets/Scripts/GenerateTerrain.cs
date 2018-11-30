@@ -12,20 +12,18 @@ public class GenerateTerrain : MonoBehaviour
     // エディター上で設定する変数
     #region SerializeField
     // コンピュートシェーダー
-    [SerializeField] ComputeShader m_computeShader;
+    [SerializeField] ComputeShader _computeShader;
     // 1辺の頂点数
-    [SerializeField] [Range(256, 1024)] int m_numVertice = 256;
+    [SerializeField] [Range(8, 64)] int _numVertice = 8;
     // 高さ
-    [SerializeField] [Range(1.0f, 10.0f)] float m_height = 5.0f;
+    [SerializeField] [Range(1.0f, 10.0f)] float _height = 5.0f;
     // 滑らかさ
-    [SerializeField] [Range(0.1f, 1f)] float m_smoothness = 0.5f;
+    [SerializeField] [Range(0.1f, 1f)] float _smoothness = 0.5f;
     // ノイズの取得位置
-    [SerializeField] [Range(0.0f, 1000.0f)] float m_offsetX = 0.0f;
-    [SerializeField] [Range(0.0f, 1000.0f)] float m_offsetY = 0.0f;
+    [SerializeField] [Range(0.0f, 1000.0f)] float _offsetX = 0.0f;
+    [SerializeField] [Range(0.0f, 1000.0f)] float _offsetY = 0.0f;
     // 生成後に割り当てるマテリアル
-    [SerializeField] Material m_material;
-    // 生成後に割り当てる物理マテリアル
-    [SerializeField] PhysicMaterial m_physicMaterial;
+    [SerializeField] Material _material;
     #endregion
 
     // メンバ変数
@@ -39,7 +37,7 @@ public class GenerateTerrain : MonoBehaviour
     // 頂点座標
     private List<Vector3> m_vertices;
     // Meshを構成する三角形の頂点の識別番号
-    int[] m_triangles;
+    //int[] m_triangles;
     // 頂点データバッファ
     private ComputeBuffer m_vertexBuffer;
     // メインカーネル
@@ -47,7 +45,7 @@ public class GenerateTerrain : MonoBehaviour
     // スレッドグループ数
     private int m_numThreadGroups;
     // Mesh
-    private Mesh m_mesh;
+    private List<Mesh> m_meshs;
     #endregion
 
     /// デバッグ用
@@ -60,15 +58,15 @@ public class GenerateTerrain : MonoBehaviour
     void Initialize()
     {
         // 初期化処理
-        m_distance = FIELD_SIZE / m_numVertice;
-        m_numVertices = m_numVertice * m_numVertice;
-        m_numTriangles = ((m_numVertice - 1) * (m_numVertice - 1)) * 6;
+        m_distance = FIELD_SIZE / _numVertice;
+        m_numVertices = _numVertice * _numVertice;
+        m_numTriangles = ((_numVertice - 1) * (_numVertice - 1)) * 6;
         m_vertices = new List<Vector3>();
-        m_triangles = new int[m_numTriangles];
+        //m_triangles = new int[m_numTriangles];
         m_vertexBuffer = new ComputeBuffer(m_numVertices, System.Runtime.InteropServices.Marshal.SizeOf(typeof(Vector3)));
-        m_mainKernelID = m_computeShader.FindKernel("CSMain");
-        m_numThreadGroups = Mathf.CeilToInt(m_numVertice);
-        m_mesh = new Mesh();
+        m_mainKernelID = _computeShader.FindKernel("CSMain");
+        m_numThreadGroups = Mathf.CeilToInt(_numVertice);
+        m_meshs = new List<Mesh>();
     }
 
     void RegenerateMesh()
@@ -78,8 +76,8 @@ public class GenerateTerrain : MonoBehaviour
         CalculateVertex();
         //Debug.Log(Time.realtimeSinceStartup - time);
 
-        // 三角形の計算
-        CalculateTriangle();
+        //// 三角形の計算
+        //CalculateTriangle();
 
         // メッシュの再設定
         ResettingMesh();
@@ -89,17 +87,17 @@ public class GenerateTerrain : MonoBehaviour
     {
        
         // バッファを設定
-        m_computeShader.SetBuffer(m_mainKernelID, "_vertices", m_vertexBuffer);
+        _computeShader.SetBuffer(m_mainKernelID, "_vertices", m_vertexBuffer);
 
         // 変数を設定
-        m_computeShader.SetInt("_numVertice", m_numVertice);
-        m_computeShader.SetFloat("_distance", m_distance);
-        m_computeShader.SetFloat("_height", m_height);
-        m_computeShader.SetFloat("_smoothness", m_smoothness * m_numVertice);
-        m_computeShader.SetVector("_offset", new Vector2(m_offsetX, m_offsetY));
+        _computeShader.SetInt("_numVertice", _numVertice);
+        _computeShader.SetFloat("_distance", m_distance);
+        _computeShader.SetFloat("_height", _height);
+        _computeShader.SetFloat("_smoothness", _smoothness * _numVertice);
+        _computeShader.SetVector("_offset", new Vector2(_offsetX, _offsetY));
 
         // コンピュートシェーダーを実行する
-        m_computeShader.Dispatch(m_mainKernelID, m_numThreadGroups, 1, m_numThreadGroups);
+        _computeShader.Dispatch(m_mainKernelID, m_numThreadGroups, 1, m_numThreadGroups);
 
         // バッファからデータを受け取る
         Vector3[] vertexData = new Vector3[m_numVertices];
@@ -110,50 +108,76 @@ public class GenerateTerrain : MonoBehaviour
         m_vertices.AddRange(vertexData);
     }
 
-    void CalculateTriangle()
+    //void CalculateTriangle()
+    //{
+    //    // 三角形の計算
+    //    int triangleIndex = 0;
+    //    for (int z = 0; z < _numVertice - 1; z++)
+    //    {
+    //        for (int x = 0; x < _numVertice - 1; x++)
+    //        {
+    //            // 基準の頂点の識別番号
+    //            int index = z * _numVertice + x;
+    //            // 左上
+    //            int a = index;
+    //            // 右上
+    //            int b = index + 1;
+    //            // 左下
+    //            int c = index + _numVertice;
+    //            // 右下
+    //            int d = index + _numVertice + 1;
+    //            // 三角形１
+    //            m_triangles[triangleIndex] = a;
+    //            m_triangles[triangleIndex + 1] = c;
+    //            m_triangles[triangleIndex + 2] = b;
+    //            // 三角形２
+    //            m_triangles[triangleIndex + 3] = c;
+    //            m_triangles[triangleIndex + 4] = d;
+    //            m_triangles[triangleIndex + 5] = b;
+    //            // 次のポリゴンの三角形の頂点の識別番号
+    //            triangleIndex += 6;
+    //        }
+    //    }
+    //}
+
+    void ResettingMesh()
     {
-        // 三角形の計算
-        int triangleIndex = 0;
-        for (int z = 0; z < m_numVertice - 1; z++)
+        m_meshs.Clear();
+        // 三角形の頂点番号
+        int[] triangls = { 0, 2, 1, 2, 3, 1 };
+        for (int z = 0; z < _numVertice - 1; z++)
         {
-            for (int x = 0; x < m_numVertice - 1; x++)
+            for (int x = 0; x < _numVertice - 1; x++)
             {
+                List<Vector3> vertices = new List<Vector3>();
                 // 基準の頂点の識別番号
-                int index = z * m_numVertice + x;
+                int index = z * _numVertice + x;
                 // 左上
-                int a = index;
+                vertices.Add(m_vertices[index]);
                 // 右上
-                int b = index + 1;
+                vertices.Add(m_vertices[index + 1]);
                 // 左下
-                int c = index + m_numVertice;
+                vertices.Add(m_vertices[index + _numVertice]);
                 // 右下
-                int d = index + m_numVertice + 1;
-                // 三角形１
-                m_triangles[triangleIndex] = a;
-                m_triangles[triangleIndex + 1] = c;
-                m_triangles[triangleIndex + 2] = b;
-                // 三角形２
-                m_triangles[triangleIndex + 3] = c;
-                m_triangles[triangleIndex + 4] = d;
-                m_triangles[triangleIndex + 5] = b;
-                // 次のポリゴンの三角形の頂点の識別番号
-                triangleIndex += 6;
+                vertices.Add(m_vertices[index + _numVertice + 1]);
+                // 新しいMeshを生成
+                Mesh mesh = new Mesh();
+                // メッシュの頂点の再割り当て
+                mesh.SetVertices(vertices);
+                mesh.SetTriangles(triangls, 0);
+                // メッシュの法線の再計算
+                mesh.RecalculateNormals();
+                m_meshs.Add(mesh);
             }
         }
     }
 
-    void ResettingMesh()
-    {
-        // メッシュの頂点の再割り当て
-        m_mesh.SetVertices(m_vertices);
-        m_mesh.SetTriangles(m_triangles, 0);
-        // メッシュの法線の再計算
-        m_mesh.RecalculateNormals();
-    }
-
     void RenderTerrain()
     {
-        Graphics.DrawMesh(m_mesh, transform.position, transform.rotation, m_material, 0);
+        foreach (Mesh mesh in m_meshs)
+        {
+            Graphics.DrawMesh(mesh, transform.position, transform.rotation, _material, 0);
+        }
     }
 
     void ReleaseBuffer()
@@ -164,6 +188,13 @@ public class GenerateTerrain : MonoBehaviour
         }
     }
     #endregion
+
+    void OnValidate()
+    {
+        ReleaseBuffer();
+        Initialize();
+        RegenerateMesh();
+    }
 
     void Start()
     {
