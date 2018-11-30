@@ -87,8 +87,12 @@
 			pos.xyz += _particles[iidx].position;
 
 			v2f o;
-			//o.pos = mul(UNITY_MATRIX_P, mul(UNITY_MATRIX_MV, pos) + float4(pos.x, pos.y, 0, 0));
+			//// TODO
+			// 非ビルボード、座標ずれなし
+			//o.pos = mul(UNITY_MATRIX_P, mul(UNITY_MATRIX_MV, pos));
+			// ビルボード、座標ずれあり
 			o.pos = mul(UNITY_MATRIX_P, mul(UNITY_MATRIX_MV, float4(0, 0, pos.z, 1)) + float4(pos.x, pos.y, 0, 0));
+			////
 			o.uv = uv;
 			o.color = _particles[iidx].color;
 		

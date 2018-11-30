@@ -1,11 +1,6 @@
 ﻿using System.Collections.Generic;
 using UnityEngine;
 
-/// 必須コンポーネント
-[RequireComponent(typeof(MeshFilter))]
-[RequireComponent(typeof(MeshRenderer))]
-[RequireComponent(typeof(MeshCollider))]
-
 public class GenerateTerrain : MonoBehaviour
 {
     // 定数
@@ -19,11 +14,11 @@ public class GenerateTerrain : MonoBehaviour
     // コンピュートシェーダー
     [SerializeField] ComputeShader m_computeShader;
     // 1辺の頂点数
-    [SerializeField] [Range(64, 512)] int m_numVertice = 160;
+    [SerializeField] [Range(256, 1024)] int m_numVertice = 256;
     // 高さ
-    [SerializeField] [Range(0.0f, 10.0f)] float m_height = 5.0f;
+    [SerializeField] [Range(1.0f, 10.0f)] float m_height = 5.0f;
     // 滑らかさ
-    [SerializeField] [Range(0.01f, 1f)] float m_smoothness = 0.5f;
+    [SerializeField] [Range(0.1f, 1f)] float m_smoothness = 0.5f;
     // ノイズの取得位置
     [SerializeField] [Range(0.0f, 1000.0f)] float m_offsetX = 0.0f;
     [SerializeField] [Range(0.0f, 1000.0f)] float m_offsetY = 0.0f;
@@ -45,18 +40,14 @@ public class GenerateTerrain : MonoBehaviour
     private List<Vector3> m_vertices;
     // Meshを構成する三角形の頂点の識別番号
     int[] m_triangles;
-    // メッシュフィルター
-    private MeshFilter m_meshFilter;
-    // メッシュレンダラー
-    private MeshRenderer m_meshRenderer;
-    // メッシュコライダー
-    private MeshCollider m_meshCollider;
     // 頂点データバッファ
     private ComputeBuffer m_vertexBuffer;
     // メインカーネル
     private int m_mainKernelID;
     // スレッドグループ数
     private int m_numThreadGroups;
+    // Mesh
+    private Mesh m_mesh;
     #endregion
 
     /// デバッグ用
@@ -74,12 +65,10 @@ public class GenerateTerrain : MonoBehaviour
         m_numTriangles = ((m_numVertice - 1) * (m_numVertice - 1)) * 6;
         m_vertices = new List<Vector3>();
         m_triangles = new int[m_numTriangles];
-        m_meshFilter = gameObject.GetComponent<MeshFilter>();
-        m_meshRenderer = gameObject.GetComponent<MeshRenderer>();
-        m_meshCollider = gameObject.GetComponent<MeshCollider>();
         m_vertexBuffer = new ComputeBuffer(m_numVertices, System.Runtime.InteropServices.Marshal.SizeOf(typeof(Vector3)));
         m_mainKernelID = m_computeShader.FindKernel("CSMain");
         m_numThreadGroups = Mathf.CeilToInt(m_numVertice);
+        m_mesh = new Mesh();
     }
 
     void RegenerateMesh()
@@ -156,41 +145,40 @@ public class GenerateTerrain : MonoBehaviour
     void ResettingMesh()
     {
         // メッシュの頂点の再割り当て
-        Mesh mesh = new Mesh();
-        mesh.SetVertices(m_vertices);
-        mesh.SetTriangles(m_triangles, 0);
+        m_mesh.SetVertices(m_vertices);
+        m_mesh.SetTriangles(m_triangles, 0);
         // メッシュの法線の再計算
-        mesh.RecalculateNormals();
-        // メッシュの再設定
-        m_meshFilter.mesh = mesh;
-        m_meshRenderer.sharedMaterial = m_material;
-        m_meshCollider.sharedMaterial = m_physicMaterial;
+        m_mesh.RecalculateNormals();
+    }
+
+    void RenderTerrain()
+    {
+        Graphics.DrawMesh(m_mesh, transform.position, transform.rotation, m_material, 0);
+    }
+
+    void ReleaseBuffer()
+    {
+        if (m_vertexBuffer != null)
+        {
+            m_vertexBuffer.Release();
+        }
     }
     #endregion
 
     void Start()
     {
-        Initialize();
-        RegenerateMesh();
-        // メッシュコライダーを取得
-        m_meshCollider.sharedMesh = m_meshFilter.sharedMesh;
-        m_meshCollider.sharedMaterial = m_physicMaterial;
-    }
-
-    void OnValidate()
-    {
+        ReleaseBuffer();
         Initialize();
         RegenerateMesh();
     }
 
     void OnRenderObject()
     {
-        
+        RenderTerrain();
     }
 
     void OnDestroy()
     {
-        // バッファを開放する
-        m_vertexBuffer.Release();
+        ReleaseBuffer();
     }
 }
