@@ -1,72 +1,48 @@
-﻿Shader "Custom/Terrain"
+﻿Shader "Custum/Terrain"
 {
-	Properties
-	{
-		_MainTex("Texture", 2D) = "white" {}
-	}
-
-	CGINCLUDE
-		#include "UnityCG.cginc"
-
-		struct VertexData
-		{
-			float3 vertex;
-			float3 normal;
-			float2 uv;
-			float4 tangent;
-		};
-
-
-		struct v2f
-		{
-			float4 pos : SV_POSITION;
-			float2 uv : TEXCOORD0;
-			float4 color : COLOR;
-			//float3 normal : TEXCOORD1;
-			//float4 tangent : TEXCOORD2;
-			//float3 worldNormal  : TEXCOORD3;
-			//float3 worldPos : TEXCOORD4;
-		};
-
-		StructuredBuffer<uint> _indices;
-		StructuredBuffer<VertexData> _vertices;
-
-		sampler2D _mainTex;
-
-		v2f vert
-		{
-
-		}
-
-		fixed4  frag(v2f i) : SV_Target
-		{
-			fixed4 col = tex2D(_MainTex, i.uv) * i.color;
-			return col;
-		}
-
-	ENDCG
 
 	SubShader
 	{
 		Tags{ "RenderType" = "Opaque" }
-		//Tags{ "RenderType" = "Transparent" "IgnoreProjector" = "True" }
 		LOD 100
+
 		Pass
 		{
-			Name "DEFERRED"
-			Blend OneMinusDstColor One // soft additive
-			Lighting Off
-			ZWrite Off
-			Cull Off
-			
 			CGPROGRAM
-				#pragma vertex vert
-				#pragma fragment frag
-				#pragma target 5.0
-				#pragma multi_compile_instancing
+			#pragma vertex vert
+			#pragma fragment frag		
+			#pragma target 4.5
+
+			#include "UnityCG.cginc"
+
+			StructuredBuffer<float4> positionBuffer;
+
+			struct v2f
+			{
+				float4 pos : SV_POSITION;
+				float4 color: COLOR;
+			};
+
+			v2f vert(appdata_full v, uint instanceID : SV_InstanceID)
+			{
+				float4 data = positionBuffer[instanceID];
+				float3 localPosition = v.vertex.xyz * data.w;
+				float3 worldPosition = data.xyz + localPosition;
+
+				v2f o;
+				o.pos = mul(UNITY_MATRIX_VP, float4(worldPosition, 1.0f));
+
+				o.color = float4((float)(instanceID % 256) / 255.0f, 0, 0, 1);
+
+				return o;
+			}
+
+			fixed4 frag(v2f i) : SV_Target
+			{
+				return i.color;
+			}
+
 			ENDCG
 		}
 	}
-
-	Fallback Off
 }
