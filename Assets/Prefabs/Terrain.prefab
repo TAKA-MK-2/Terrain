@@ -44,9 +44,10 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _computeShader: {fileID: 7200000, guid: 83f65998572963b429a02e479d2ae2a5, type: 3}
-  _numVertices: 8
-  _height: 5
+  _numVertices: 1024
+  _height: 50
   _smoothness: 0.5
   _offsetX: 0
   _offsetY: 0
-  _material: {fileID: 2100000, guid: a5269cf7b6a91b14fb316447dde53bab, type: 2}
+  _instanceMesh: {fileID: 10210, guid: 0000000000000000e000000000000000, type: 0}
+  _instanceMaterial: {fileID: 2100000, guid: 4213f29002a2eca4987672e33c389f83, type: 2}
