@@ -1,11 +1,10 @@
-﻿#pragma kernel CSMain
+﻿#pragma kernel CalculateVertex
 
 // スレッド数
 #define THREAD_NUM 32
 
 // 頂点バッファ
-RWStructuredBuffer<float3> _vertices;
-RWStructuredBuffer<float4> _positions;
+RWStructuredBuffer<float3> _vertexBuffer;
 
 // 1辺の頂点数
 int _numVertice;
@@ -13,22 +12,25 @@ int _numVertice;
 float _distance;
 // 高さ
 float _height;
-// ノイズの取得位置
-float2 _offset;
 // 滑らかさ
 float _smoothness;
+// ノイズの取得位置
+float2 _offset;
 
+// floatの乱数生成
 float random(float2 p) 
 {
 	return frac(sin(dot(p, float2(12.9898, 78.233))) * 43758.5453);
 }
 
+// float2の乱数生成
 float2 random2(float2 st) 
 {
 	st = float2(dot(st, float2(127.1, 311.7)),dot(st, float2(269.5, 183.3)));
 	return -1.0 + 2.0*frac(sin(st)*43758.5453123);
 }
 
+// パーリンノイズ計算
 float perlinNoise(float2 st)
 {
 	float2 p = floor(st);
@@ -46,6 +48,7 @@ float perlinNoise(float2 st)
 		u.y) + 0.5f;
 }
 
+// fBmノイズ計算
 float fBm(float2 st)
 {
 	float f = 0;
@@ -63,8 +66,9 @@ float fBm(float2 st)
 	return f;
 }
 
+// メインカーネル
 [numthreads(THREAD_NUM, 1, THREAD_NUM)]
-void CSMain(uint3 id : SV_DispatchThreadID)
+void CalculateVertex(uint3 id : SV_DispatchThreadID)
 {
 	// バッファの要素番号
 	int index = (id.z * _numVertice) + id.x;
@@ -73,5 +77,5 @@ void CSMain(uint3 id : SV_DispatchThreadID)
 	vertex.x = id.x * _distance + _distance / 2.0;
 	vertex.y = _height * (fBm(float2(id.x + _offset.x, id.z + _offset.y) / _smoothness));
 	vertex.z = id.z * _distance + _distance / 2.0;
-	_vertices[index] = vertex;
+	_vertexBuffer[index] = vertex;
 }
