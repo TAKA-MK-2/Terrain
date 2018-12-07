@@ -19,6 +19,8 @@ public class GenerateTerrain : MonoBehaviour
     [SerializeField] Mesh _mesh;
     // シェーダーマテリアル
     [SerializeField] Material _shaderMaterial;
+    // テクスチャ
+    [SerializeField] Texture _texture;
     // 1辺の頂点数
     [SerializeField] [Range(8, 1024)] int _numVertices = 256;
     // 高さ
@@ -92,13 +94,17 @@ public class GenerateTerrain : MonoBehaviour
     // 地形描画
     void RenderTerrain()
     {
+        // テクスチャを設定
+        _shaderMaterial.SetTexture(ShaderDefines.GetTexturePropertyID(ShaderDefines.TextureID._mainTexture), _texture);
+        
         // 変数を設定
         _shaderMaterial.SetInt(ShaderDefines.GetIntPropertyID(ShaderDefines.IntID._numVertices), _numVertices);
-        _shaderMaterial.SetFloat(ShaderDefines.GetFloatPropertyID(ShaderDefines.FloatID._distance), m_distance);
+
+        // バッファの設定
         _shaderMaterial.SetBuffer(ShaderDefines.GetBufferPropertyID(ShaderDefines.BufferID._verticesBuffer), m_verticesBuffer);
 
         // 描画処理
-        Graphics.DrawMeshInstancedIndirect(_mesh, 0, _shaderMaterial, new Bounds(Vector3.zero, new Vector3(100.0f, 100.0f, 100.0f)), m_argsBuffer);
+        Graphics.DrawMeshInstancedIndirect(_mesh, 0, _shaderMaterial, new Bounds(Vector3.zero, new Vector3(1000.0f, 1000.0f, 1000.0f)), m_argsBuffer);
     }
 
     // バッファの開放処理

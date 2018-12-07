@@ -75,16 +75,18 @@
 			// パーティクル情報を取り出す
 			GPUParticleData particle = _particlesBuffer[iidx];
 
-			// 座標を計算
+			// 現在の座標
+			float3 offset = particle.position;
+
+			// 座標にスケールを適用
 			pos.xyz *= particle.scale;
-			pos.xyz += particle.position;
 
 			// ピクセルシェーダーへの出力
 			v2f o;
-			// 非ビルボード、座標ずれなし
-			o.pos = mul(UNITY_MATRIX_P, mul(UNITY_MATRIX_MV, pos));
-			// ビルボード、座標ずれあり
-			//o.pos = mul(UNITY_MATRIX_P, mul(UNITY_MATRIX_MV, float4(0, 0, pos.z, 1)) + float4(pos.x, pos.y, 0, 0));
+			// 非ビルボード
+			//o.pos = mul(UNITY_MATRIX_P, mul(UNITY_MATRIX_MV, pos));
+			// ビルボード
+			o.pos = mul(UNITY_MATRIX_P, mul(UNITY_MATRIX_MV, float4(offset.x, offset.y, offset.z + pos.z, 1)) + float4(pos.x, pos.y, 0, 0));	
 			o.uv = uv;
 			o.color = particle.color;
 		

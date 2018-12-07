@@ -8,13 +8,13 @@ RWStructuredBuffer<float3> _verticesBuffer;
 
 // フィールドサイズ
 float _fieldSize;
-// 1辺の頂点数
+// 頂点数
 int _numVertices;
-// 辺と辺の距離
+// 頂点間の距離
 float _distance;
 // 高さ
 float _height;
-// 滑らかさ
+// ノイズの滑らかさ
 float _smoothness;
 // ノイズの取得位置
 float2 _offset;

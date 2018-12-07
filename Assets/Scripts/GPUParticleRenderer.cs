@@ -291,15 +291,15 @@ public class GPUParticleRenderer : MonoBehaviour
     // シェーダーの値の設定
     private void SetMaterialParam()
     {
-        // 変数の設定
+        // テクスチャを設定
         _shaderMaterial.SetTexture(ShaderDefines.GetTexturePropertyID(ShaderDefines.TextureID._mainTexture), _texture);
 
-        // バッファの設定
+        // バッファを設定
         _shaderMaterial.SetBuffer(ShaderDefines.GetBufferPropertyID(ShaderDefines.BufferID._meshIndicesBuffer), m_meshIndicesBuffer);
         _shaderMaterial.SetBuffer(ShaderDefines.GetBufferPropertyID(ShaderDefines.BufferID._meshVertexDatasBuffer), m_meshVertexDatasBuffer);
         _shaderMaterial.SetBuffer(ShaderDefines.GetBufferPropertyID(ShaderDefines.BufferID._particlesBuffer), m_particlesBuffer);
 
-        // パスの設定
+        // パスを設定
         _shaderMaterial.SetPass(0);
     }
 

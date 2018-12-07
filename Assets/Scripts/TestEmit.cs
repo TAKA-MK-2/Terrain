@@ -16,12 +16,9 @@ public class TestEmit : MonoBehaviour
             mouseposition = Camera.main.ScreenToWorldPoint(mouseposition);
             _particleEmitter.Emit(mouseposition);
         }
-        for (int i = 0; i < _positions.Count; i++)
+        foreach (Vector3 position in _positions)
         {
-            if (Input.GetKey(KeyCode.Alpha0 + (i + 1)))
-            {
-                _particleEmitter.Emit(_positions[i]);
-            }
+            _particleEmitter.Emit(position);
         }
     }
 }

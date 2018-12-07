@@ -18,6 +18,9 @@
 			// 頂点バッファ
 			StructuredBuffer<float3> _verticesBuffer;
 
+			// テクスチャ
+			sampler2D _mainTexture;
+	
 			// 頂点数
 			int _numVertices;
 
@@ -37,14 +40,15 @@
 				// 座標
 				float3 vertex = _verticesBuffer[index];
 
-				// 色相
-				float3 hue = float3(0, 1, 0);
-				// 明度
-				float brightness = (instanceID / (_numVertices - 1)) / float(_numVertices - 1);
-				// 彩度
-				float chroma = (instanceID % (_numVertices - 1)) / float(_numVertices - 1);
-				// 色情報
-				float3 color = (float3(1, 1, 1) * brightness) + ((hue - float3(1, 1, 1)) * chroma);
+				//// 色相
+				//float3 hue = float3(0, 1, 0);
+				//// 明度
+				//float brightness = (instanceID / (_numVertices - 1)) / float(_numVertices - 1);
+				//// 彩度
+				//float chroma = (instanceID % (_numVertices - 1)) / float(_numVertices - 1);
+				//// 色情報
+				//float3 color = (float3(1, 1, 1) * brightness) + ((hue - float3(1, 1, 1)) * chroma);
+				float3 color = float3(1, 1, 1);
 				// 透明度
 				float alpha = 1;
 
@@ -56,9 +60,11 @@
 				return o;
 			}
 
-			fixed4 frag(v2f i) : SV_Target
+			fixed4  frag(v2f i) : SV_Target
 			{
 				return i.color;
+				fixed4 col = tex2D(_mainTexture, i.uv) * i.color;
+				return col;
 			}
 
 			ENDCG
