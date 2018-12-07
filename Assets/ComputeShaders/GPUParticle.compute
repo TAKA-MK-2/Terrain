@@ -1,5 +1,4 @@
-﻿// Each #kernel tells which function to compile; you can have many kernels
-// 初期化
+﻿// 初期化
 #pragma kernel Init
 // エミット
 #pragma kernel Emit
@@ -9,7 +8,7 @@
 // スレッド数
 #define THREAD_NUM_X 32
 
-// GPUパーティクル情報
+// パーティクル情報
 struct GPUParticleData
 {
 	// アクティブか判断する
@@ -18,10 +17,6 @@ struct GPUParticleData
 	float3 position;
 	// 速度
 	float3 velocity;
-	// 回転
-	float3 rotation;
-	// 角速度
-	float3 angVelocity;
 	// スケール
 	float scale;
 	// 開始スケール
@@ -36,25 +31,25 @@ struct GPUParticleData
 	float elapsedTime;
 };
 
-// 乱数生成(0～1)
+// floatの乱数生成(0～1)
 inline float rnd(float2 p)
 {
 	return frac(sin(dot(p, float2(12.9898, 78.233))) * 43758.5453);
 }
 
-// (-1～1)
+// float3の乱数生成(-1～1)
 inline float3 rnd3(float2 p) 
 {
 	return 2.0 * (float3(rnd(p * 1), rnd(p * 2), rnd(p * 3)) - 0.5);
 }
 
-// GPUパーティクルのバッファ
+// パーティクル情報
 RWStructuredBuffer<GPUParticleData> _particles;
-// 非アクティブ状態のGPUパーティクルの番号のバッファ
+// 使用中のパーティクルの要素番号
+AppendStructuredBuffer<uint> _activeList;
+// 未使用のパーティクルの要素番号
 AppendStructuredBuffer<uint> _deadList;
 ConsumeStructuredBuffer<uint> _particlePool;
-// アクティブ状態のGPUパーティクルの番号のバッファ
-AppendStructuredBuffer<uint> _activeList;
 
 // 座標
 float3 _position;
@@ -82,68 +77,74 @@ float _endScale;
 float3 _color;
 // 生存時間
 float _lifeTime;
-// 彩度
-float _sai;
-// 明るさ
-float _val;
 // フレーム時間
 float _deltaTime;
 
+// 初期化処理
 [numthreads(THREAD_NUM_X, 1, 1)]
 void Init(uint3 id : SV_DispatchThreadID)
 {
-	uint no = id.x;
+	// 要素番号
+	uint index = id.x;
 
-	_particles[no].isActive = false;
-	_deadList.Append(no);
+	// 未使用リストに追加に追加
+	_particles[index].isActive = false;
+	_deadList.Append(index);
 }
 
+// エミット処理
 [numthreads(THREAD_NUM_X, 1, 1)]
 void Emit()
 {
+	// 要素番号をパーティクルプールから取り出す
+	uint index = _particlePool.Consume();
+
 	// 値をランダム化
-	uint no = _particlePool.Consume();
-	float2 seed = float2(no, no + 1) * _elapsedTime % 10000;
+	float2 seed = float2(index, index + 1) * _elapsedTime % 10000;
 	float3 position = rnd3(seed);
-	float3 rotation = rnd3(seed + 1);
-	float3 velocity = rnd3(seed + 2);
-	float startScale = rnd(seed + 3) * _startScale;
+	float3 velocity = rnd3(seed + 1);
+	float startScale = rnd(seed + 2) * _startScale;
 	float endScale = _endScale;
 
-	// パーティクルの設定
-	_particles[no].isActive = true;
-	_particles[no].position = _position + (position * _range);
-	_particles[no].velocity = (_maxVelocity - _minVelocity) * abs(velocity) + _minVelocity;
-	_particles[no].rotation = _angVelocity * rotation;
-	_particles[no].angVelocity = _angVelocity * rotation;
-	_particles[no].startScale = startScale;
-	_particles[no].endScale = endScale;
-	_particles[no].color = float4(_color, 1);
-	_particles[no].lifeTime = _lifeTime * rnd(seed + 3);
-	_particles[no].elapsedTime = 0;
+	// パーティクルを設定
+	_particles[index].isActive = true;
+	_particles[index].position = _position + (position * _range);
+	_particles[index].velocity = (_maxVelocity - _minVelocity) * abs(velocity) + _minVelocity;
+	_particles[index].startScale = startScale;
+	_particles[index].endScale = endScale;
+	_particles[index].color = float4(_color, 1);
+	_particles[index].lifeTime = _lifeTime * rnd(seed + 3);
+	_particles[index].elapsedTime = 0;
 }
 
+// 更新処理
 [numthreads(THREAD_NUM_X, 1, 1)]
 void Update(uint3 id : SV_DispatchThreadID)
 {
-	uint no = id.x;
+	// 要素番号
+	uint index = id.x;
 
-	if (_particles[no].isActive)
+	// アクティブか判定
+	if (_particles[index].isActive)
 	{
-		_particles[no].position += _particles[no].velocity * _deltaTime;
-		_particles[no].velocity.y -= _gravity * _deltaTime;
-		_particles[no].rotation += _particles[no].angVelocity * _deltaTime;
-		_particles[no].scale = (pow(_particles[no].elapsedTime / _particles[no].lifeTime, 3.0)) 
-			* (_particles[no].endScale - _particles[no].startScale) + _particles[no].startScale;
-		_particles[no].elapsedTime += _deltaTime;
-		if (_particles[no].lifeTime < _particles[no].elapsedTime)
+		// パーティクルの更新処理
+		_particles[index].position += _particles[index].velocity * _deltaTime;
+		_particles[index].scale = (pow(_particles[index].elapsedTime / _particles[index].lifeTime, 3.0)) * (_particles[index].endScale - _particles[index].startScale) + _particles[index].startScale;
+		_particles[index].velocity.y -= _gravity * _deltaTime;
+		_particles[index].elapsedTime += _deltaTime;
+
+		// 消滅時間になったか判定
+		if (_particles[index].lifeTime < _particles[index].elapsedTime)
 		{
-			_particles[no].isActive = false;
-			_deadList.Append(no);
+			// パーティクルを非アクティブにする
+			_particles[index].isActive = false;
+			// 未使用リストに追加
+			_deadList.Append(index);
 		}
 		else
 		{
-			_activeList.Append(no);
+			// 使用中リストに追加
+			_activeList.Append(index);
 		}
 
 	}

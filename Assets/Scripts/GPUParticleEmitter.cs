@@ -4,48 +4,31 @@ using UnityEngine;
 
 public class GPUParticleEmitter : MonoBehaviour
 {
-    #region SerializeField
-    [SerializeField] List<GameObject> _particleSystems;
-    #endregion
+    [SerializeField] List<GPUParticleManager> _particleSystems;
 
-    void OnValidate()
-    {
-        foreach (GameObject particleSystem in _particleSystems)
-        {
-            if (!particleSystem.CompareTag("GPUParticleSystem"))
-            {
-                _particleSystems.Remove(particleSystem);
-            }
-        }
-    }
-
-    // 座標とパーティクルシステムの番号指定のエミット
     public void Emit(Vector3 _position, int _particleSystemIndex)
     {
-        _particleSystems[_particleSystemIndex].GetComponent<GPUParticleManager>().EmitParticle(_position);
+        _particleSystems[_particleSystemIndex].EmitParticle(_position);
     }
 
-    // 座標指定のエミット
     public void Emit(Vector3 _position)
     {
-        foreach (GameObject particleSystem in _particleSystems)
+        foreach (GPUParticleManager particleSystem in _particleSystems)
         {
-            particleSystem.GetComponent<GPUParticleManager>().EmitParticle(_position);
+            particleSystem.EmitParticle(_position);
         }
     }
 
-    // パーティクルシステムの番号指定のエミット
     public void Emit(int _particleSystemIndex)
     {
-        _particleSystems[_particleSystemIndex].GetComponent<GPUParticleManager>().EmitParticle(transform.position);
+        _particleSystems[_particleSystemIndex].EmitParticle(transform.position);
     }
 
-    // 指定なしのエミット
     public void Emit()
     {
-        foreach (GameObject particleSystem in _particleSystems)
+        foreach (GPUParticleManager particleSystem in _particleSystems)
         {
-            particleSystem.GetComponent<GPUParticleManager>().EmitParticle(transform.position);
+            particleSystem.EmitParticle(transform.position);
         }
     }
 }

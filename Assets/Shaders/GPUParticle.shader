@@ -1,24 +1,23 @@
 ﻿Shader "Custom/GPUInstancing"
 {
-	Properties
-	{
-		_MainTex("Texture", 2D) = "white" {}
-	}
-
 	CGINCLUDE
 		#include "UnityCG.cginc"
 		#include "Assets/Shaders/Libs/ColorUtil.cginc"
 		#include "Assets/Shaders/Libs/Quaternion.cginc"
 		#include "GPUParticleCommon.cginc"
 
+		// 頂点情報
 		struct VertexData
 		{
+			// 座標
 			float3 vertex;
+			// 法線
 			float3 normal;
+			// uv
 			float2 uv;
-			float4 tangent;
 		};
 
+		// パーティクル情報
 		struct GPUParticleData
 		{
 			// アクティブか判断する
@@ -27,10 +26,6 @@
 			float3 position;
 			// 速度
 			float3 velocity;
-			// 回転
-			float3 rotation;
-			// 角速度
-			float3 angVelocity;
 			// スケール
 			float scale;
 			// 開始スケール
@@ -45,77 +40,73 @@
 			float elapsedTime;
 		};
 
+		// ピクセルシェーダーへの出力
 		struct v2f
 		{
 			float4 pos : SV_POSITION;
 			float2 uv : TEXCOORD0;
 			float4 color : COLOR;
-			//float3 normal : TEXCOORD1;
-			//float4 tangent : TEXCOORD2;
-			//float3 worldNormal  : TEXCOORD3;
-			//float3 worldPos : TEXCOORD4;
 		};
 
+		// メッシュの頂点の要素番号
 		StructuredBuffer<uint> _indices;
+		// メッシュの頂点情報
 		StructuredBuffer<VertexData> _vertices;
+		// パーティクル情報
 		StructuredBuffer<GPUParticleData> _particles;
 
-		sampler2D _MainTex;
-
-		float4 _MainTex_ST;
-		float4 _RotationOffsetAxis;
-
-		float3 _upVec;
+		// テクスチャ
+		sampler2D _mainTexture;
 
 		v2f vert(uint vid : SV_VertexID, uint iid : SV_InstanceID)
 		{
+			// 頂点情報バッファの要素番号
 			uint idx = _indices[vid];
-			float4 pos = float4(_vertices[idx].vertex, 1.0);
-			float2 uv = _vertices[idx].uv;
-			float3 normal = _vertices[idx].normal;
-			float4 tangent = _vertices[idx].tangent;
 
-			float4 Q = getAngleAxisRotation(_RotationOffsetAxis.xyz, _RotationOffsetAxis.w);
+			// 頂点情報を取り出す
+			VertexData vertex = _vertices[idx];
+			float4 pos = float4(vertex.vertex, 1.0);
+			float2 uv = vertex.uv;
+			float3 normal = vertex.normal;
 
+			// パーティクル情報バッファの要素番号
 			uint iidx = GetParticleIndex(iid);
 
-			float4 rotation = qmul(float4(_particles[iidx].rotation, 1), Q);
-			//float4 rotation = getAngleAxisRotation(_RotationOffsetAxis.xyz, _RotationOffsetAxis.w);
+			// パーティクル情報を取り出す
+			GPUParticleData particle = _particles[iidx];
 
-			pos.xyz *= _particles[iidx].scale;
-			pos.xyz = rotateWithQuaternion(pos.xyz, rotation);
-			pos.xyz += _particles[iidx].position;
+			// 座標を計算
+			pos.xyz *= particle.scale;
+			pos.xyz += particle.position;
 
+			// ピクセルシェーダーへの出力
 			v2f o;
-			//// TODO
 			// 非ビルボード、座標ずれなし
-			//o.pos = mul(UNITY_MATRIX_P, mul(UNITY_MATRIX_MV, pos));
+			o.pos = mul(UNITY_MATRIX_P, mul(UNITY_MATRIX_MV, pos));
 			// ビルボード、座標ずれあり
-			o.pos = mul(UNITY_MATRIX_P, mul(UNITY_MATRIX_MV, float4(0, 0, pos.z, 1)) + float4(pos.x, pos.y, 0, 0));
-			////
+			//o.pos = mul(UNITY_MATRIX_P, mul(UNITY_MATRIX_MV, float4(0, 0, pos.z, 1)) + float4(pos.x, pos.y, 0, 0));
 			o.uv = uv;
-			o.color = _particles[iidx].color;
+			o.color = particle.color;
 		
 			return o;
 		}
 
 		fixed4  frag(v2f i) : SV_Target
 		{
-			fixed4 col = tex2D(_MainTex, i.uv) * i.color;
+			fixed4 col = tex2D(_mainTexture, i.uv) * i.color;
 			return col;
 		}
 	ENDCG
 
 	SubShader
 	{
-		//Tags{ "RenderType" = "Opaque" }
 		Tags{ "RenderType" = "Transparent" "IgnoreProjector" = "True"}
 		LOD 100
 
 		Pass
 		{
 			Name "DEFERRED"
-			Blend OneMinusDstColor One // soft additive
+			Blend OneMinusDstColor One
 			Lighting Off
 			ZWrite Off
 			Cull Off

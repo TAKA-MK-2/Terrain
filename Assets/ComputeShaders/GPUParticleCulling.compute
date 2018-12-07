@@ -1,10 +1,10 @@
-﻿// カリングを判定する
-#pragma kernel CheckCameraCulling
+﻿// カリングを行う
+#pragma kernel FrustumCulling
 
 // スレッド数
 #define THREAD_NUM_X 32
 
-// GPUパーティクル情報
+// パーティクル情報
 struct GPUParticleData
 {
 	// アクティブか判断する
@@ -13,10 +13,6 @@ struct GPUParticleData
 	float3 position;
 	// 速度
 	float3 velocity;
-	// 回転
-	float3 rotation;
-	// 角速度
-	float3 angVelocity;
 	// スケール
 	float scale;
 	// 開始スケール
@@ -31,47 +27,47 @@ struct GPUParticleData
 	float elapsedTime;
 };
 
+// パーティクル情報
+StructuredBuffer<GPUParticleData> _particlesBuffer;
+// 使用中のパーティクルの要素番号
+StructuredBuffer<uint> _particleActiveList;
+// 視界内のパーティクルの要素番号
+AppendStructuredBuffer<uint> _inViewAppend;
+
 // パーティクル数
 int _numParticles;
-
 // カメラ座標
 float3 _cameraPosition;
-// カメラの視錐台の法線
+// 分割した視錐台の法線
 float4x3 _cameraFrustumNormals;
 
-// GPUパーティクルのバッファ
-StructuredBuffer<GPUParticleData> _particlesBuffer;
-// 写っているパーティクルリストのバッファ
-AppendStructuredBuffer<uint> _inViewAppend;
-// アクティブ状態のパーティクルの番号のバッファ
-StructuredBuffer<uint> _particleActiveList;
-
 [numthreads(THREAD_NUM_X, 1, 1)]
-void CheckCameraCulling(uint3 id : SV_DispatchThreadID)
+void FrustumCulling(uint3 id : SV_DispatchThreadID)
 {
 	// スレッドの番号を取得
-	uint idx = id.x;
-	
+	uint index = id.x;
+
 	// パーティクルの番号を取得
-	uint particleIndex = _particleActiveList[idx];
+	uint particleIndex = _particleActiveList[index];
 
-	if (particleIndex < _numParticles) 
+	// パーティクル情報を取得
+	GPUParticleData data = _particlesBuffer[particleIndex];
+
+	// カメラからのローカル座標
+	float3 posFromCamera = data.position - _cameraPosition;
+
+	// パーティクルのスケール
+	float scale = data.scale;
+
+	// 視推台内にあるか判定
+	if (data.isActive &&
+		(dot(_cameraFrustumNormals[0], posFromCamera) > -scale) &&
+		(dot(_cameraFrustumNormals[1], posFromCamera) > -scale) &&
+		(dot(_cameraFrustumNormals[2], posFromCamera) > -scale) &&
+		(dot(_cameraFrustumNormals[3], posFromCamera) > -scale)
+		)
 	{
-		// GPUパーティクルのデータを取得
-		GPUParticleData data = _particlesBuffer[particleIndex];
-
-		// CheckCulling!
-		float3 posFromCamera = data.position - _cameraPosition;
-		float scale = data.scale;
-
-		if (data.isActive &&
-			(dot(_cameraFrustumNormals[0], posFromCamera) > -scale)
-			&& (dot(_cameraFrustumNormals[1], posFromCamera) > -scale)
-			&& (dot(_cameraFrustumNormals[2], posFromCamera) > -scale)
-			&& (dot(_cameraFrustumNormals[3], posFromCamera) > -scale)
-			)
-		{
-			_inViewAppend.Append(particleIndex);
-		}
+		// 視界内のパーティクルリストに追加
+		_inViewAppend.Append(particleIndex);
 	}
 }

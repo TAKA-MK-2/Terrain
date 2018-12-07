@@ -15,9 +15,12 @@
 			#include "UnityCG.cginc"
 			#include "Libs/Quaternion.cginc"
 
+			// 頂点バッファ
 			StructuredBuffer<float3> _vertexBuffer;
+			// 頂点数
 			int _numVertices;
 
+			// ピクセルシェーダーへの出力
 			struct v2f
 			{
 				float4 pos : SV_POSITION;
@@ -32,14 +35,23 @@
 
 				// 座標
 				float3 vertex = _vertexBuffer[index];
+
+				// 色相
+				float3 hue = float3(0, 1, 0);
+				// 明度
+				float brightness = (instanceID / (_numVertices - 1)) / float(_numVertices - 1);
+				// 彩度
+				float chroma = (instanceID % (_numVertices - 1)) / float(_numVertices - 1);
 				// 色情報
-				float col = instanceID / (float)((_numVertices - 1) * (_numVertices - 1));
+				float3 color = (float3(1, 1, 1) * brightness) + ((hue - float3(1, 1, 1)) * chroma);
+				// 透明度
+				float alpha = 1;
 
 				// ピクセルシェーダーへの出力
 				v2f o;
 				o.pos = mul(UNITY_MATRIX_VP, float4(vertex, 1.0f));
 				o.uv = v.texcoord;
-				o.color = float4(col, col, col, 1);
+				o.color = float4(color, alpha);
 				return o;
 			}
 

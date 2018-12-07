@@ -6,7 +6,7 @@ public class GenerateTerrain : MonoBehaviour
     // 定数
     #region define
     // ComputeShaderのスレッド数
-    protected const int THREAD_NUM = (32);
+    protected const int THREAD_NUM = (8);
     //フィールドのサイズ
     private const float FIELD_SIZE = (100.0f);
     #endregion
@@ -15,12 +15,12 @@ public class GenerateTerrain : MonoBehaviour
     #region SerializeField
     // コンピュートシェーダー
     [SerializeField] ComputeShader _computeShader;
-    // インスタンスのメッシュ
+    // メッシュ
     [SerializeField] Mesh _mesh;
-    // インスタンスのマテリアル
+    // シェーダーマテリアル
     [SerializeField] Material _shaderMaterial;
     // 1辺の頂点数
-    [SerializeField] [Range(256, 1024)] int _numVertices = 256;
+    [SerializeField] [Range(8, 1024)] int _numVertices = 256;
     // 高さ
     [SerializeField] [Range(0.0f, 100.0f)] float _height = 50.0f;
     // ノイズの滑らかさ
@@ -80,23 +80,25 @@ public class GenerateTerrain : MonoBehaviour
         _computeShader.SetBuffer(m_kernelID, "_vertexBuffer", m_vertexBuffer);
 
         // 変数を設定
+        _computeShader.SetFloat("_fieldSize", FIELD_SIZE);
         _computeShader.SetInt("_numVertice", _numVertices);
         _computeShader.SetFloat("_distance", m_distance);
         _computeShader.SetFloat("_height", _height);
         _computeShader.SetFloat("_smoothness", _smoothness * _numVertices);
         _computeShader.SetVector("_offset", new Vector2(_offsetX, _offsetY));
 
-        // コンピュートシェーダーを実行する
+        // カーネルの実行
         _computeShader.Dispatch(m_kernelID, m_numThreadGroups, 1, m_numThreadGroups);
     }
 
-    //地形描画
+    // 地形描画
     void RenderTerrain()
     {
         // 変数を設定
         _shaderMaterial.SetInt("_numVertices", _numVertices);
         _shaderMaterial.SetFloat("_distance", m_distance);
         _shaderMaterial.SetBuffer("_vertexBuffer", m_vertexBuffer);
+
         // 描画処理
         Graphics.DrawMeshInstancedIndirect(_mesh, 0, _shaderMaterial, new Bounds(Vector3.zero, new Vector3(100.0f, 100.0f, 100.0f)), m_argsBuffer);
     }

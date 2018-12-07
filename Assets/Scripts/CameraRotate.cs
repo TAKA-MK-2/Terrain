@@ -2,13 +2,13 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-public class CameraRotate : MonoBehaviour {
-
+public class CameraRotate : MonoBehaviour
+{
     public Vector3 axis = Vector3.up;
     public float rotSpeed = 60;
 	
-	// Update is called once per frame
-	void Update () {
+	void Update ()
+    {
         transform.Rotate(axis, rotSpeed * Time.deltaTime);
     }
 }
