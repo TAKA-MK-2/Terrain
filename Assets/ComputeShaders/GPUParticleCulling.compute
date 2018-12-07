@@ -29,10 +29,9 @@ struct GPUParticleData
 
 // パーティクル情報
 StructuredBuffer<GPUParticleData> _particlesBuffer;
-// 使用中のパーティクルの要素番号
-StructuredBuffer<uint> _particleActiveList;
+StructuredBuffer<uint> _activeParticlesBuffer;
 // 視界内のパーティクルの要素番号
-AppendStructuredBuffer<uint> _inViewAppend;
+AppendStructuredBuffer<uint> _inViewParticlesBuffer;
 
 // パーティクル数
 int _numParticles;
@@ -47,8 +46,8 @@ void FrustumCulling(uint3 id : SV_DispatchThreadID)
 	// スレッドの番号を取得
 	uint index = id.x;
 
-	// パーティクルの番号を取得
-	uint particleIndex = _particleActiveList[index];
+	// パーティクルの要素番号を取得
+	uint particleIndex = _activeParticlesBuffer[index];
 
 	// パーティクル情報を取得
 	GPUParticleData data = _particlesBuffer[particleIndex];
@@ -68,6 +67,6 @@ void FrustumCulling(uint3 id : SV_DispatchThreadID)
 		)
 	{
 		// 視界内のパーティクルリストに追加
-		_inViewAppend.Append(particleIndex);
+		_inViewParticlesBuffer.Append(particleIndex);
 	}
 }

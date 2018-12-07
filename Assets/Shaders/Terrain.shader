@@ -16,7 +16,8 @@
 			#include "Libs/Quaternion.cginc"
 
 			// 頂点バッファ
-			StructuredBuffer<float3> _vertexBuffer;
+			StructuredBuffer<float3> _verticesBuffer;
+
 			// 頂点数
 			int _numVertices;
 
@@ -34,7 +35,7 @@
 				int index = instanceID + (v.texcoord.y * _numVertices + v.texcoord.x) + (instanceID / (_numVertices - 1));
 
 				// 座標
-				float3 vertex = _vertexBuffer[index];
+				float3 vertex = _verticesBuffer[index];
 
 				// 色相
 				float3 hue = float3(0, 1, 0);

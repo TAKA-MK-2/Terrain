@@ -44,31 +44,25 @@ inline float3 rnd3(float2 p)
 }
 
 // パーティクル情報
-RWStructuredBuffer<GPUParticleData> _particles;
+RWStructuredBuffer<GPUParticleData> _particlesBuffer;
 // 使用中のパーティクルの要素番号
-AppendStructuredBuffer<uint> _activeList;
+AppendStructuredBuffer<uint> _activeParticlesBuffer;
 // 未使用のパーティクルの要素番号
-AppendStructuredBuffer<uint> _deadList;
-ConsumeStructuredBuffer<uint> _particlePool;
+AppendStructuredBuffer<uint> _deadParticlesBuffer;
+ConsumeStructuredBuffer<uint> _particlePoolBuffer;
 
-// 座標
-float3 _position;
-// スケール
-float _scale;
+// 重力
+float _gravity;
 // 経過時間
 float _elapsedTime;
+// 座標
+float3 _position;
 // エミッターのサイズ
 float3 _range;
-// エミットの方向
-float3 _direction;
 // 最低速度
 float3 _minVelocity;
 // 最高速度
 float3 _maxVelocity;
-// 重力
-float _gravity;
-// 角速度
-float3 _angVelocity;
 // 開始スケール
 float _startScale;
 // 最終スケール
@@ -88,8 +82,8 @@ void Init(uint3 id : SV_DispatchThreadID)
 	uint index = id.x;
 
 	// 未使用リストに追加に追加
-	_particles[index].isActive = false;
-	_deadList.Append(index);
+	_particlesBuffer[index].isActive = false;
+	_deadParticlesBuffer.Append(index);
 }
 
 // エミット処理
@@ -97,24 +91,27 @@ void Init(uint3 id : SV_DispatchThreadID)
 void Emit()
 {
 	// 要素番号をパーティクルプールから取り出す
-	uint index = _particlePool.Consume();
+	uint index = _particlePoolBuffer.Consume();
+
+	// バッファからパーティクル情報を取り出す
+	GPUParticleData particle = _particlesBuffer[index];
 
 	// 値をランダム化
 	float2 seed = float2(index, index + 1) * _elapsedTime % 10000;
-	float3 position = rnd3(seed);
-	float3 velocity = rnd3(seed + 1);
-	float startScale = rnd(seed + 2) * _startScale;
-	float endScale = _endScale;
 
 	// パーティクルを設定
-	_particles[index].isActive = true;
-	_particles[index].position = _position + (position * _range);
-	_particles[index].velocity = (_maxVelocity - _minVelocity) * abs(velocity) + _minVelocity;
-	_particles[index].startScale = startScale;
-	_particles[index].endScale = endScale;
-	_particles[index].color = float4(_color, 1);
-	_particles[index].lifeTime = _lifeTime * rnd(seed + 3);
-	_particles[index].elapsedTime = 0;
+	particle.isActive = true;
+	particle.position = _position + (rnd3(seed) * _range);
+	particle.velocity = (_maxVelocity - _minVelocity) * abs(rnd3(seed + 1)) + _minVelocity;
+	particle.scale = _startScale;
+	particle.startScale = _startScale;
+	particle.endScale = _endScale;
+	particle.color = float4(_color, 1);
+	particle.lifeTime = _lifeTime * rnd(seed + 2);
+	particle.elapsedTime = 0;
+
+	// バッファに再設定
+	_particlesBuffer[index] = particle;
 }
 
 // 更新処理
@@ -124,29 +121,33 @@ void Update(uint3 id : SV_DispatchThreadID)
 	// 要素番号
 	uint index = id.x;
 
+	// バッファからパーティクル情報を取り出す
+	GPUParticleData particle = _particlesBuffer[index];
+
 	// アクティブか判定
-	if (_particles[index].isActive)
+	if (particle.isActive)
 	{
 		// パーティクルの更新処理
-		_particles[index].position += _particles[index].velocity * _deltaTime;
-		_particles[index].scale = (pow(_particles[index].elapsedTime / _particles[index].lifeTime, 3.0)) * (_particles[index].endScale - _particles[index].startScale) + _particles[index].startScale;
-		_particles[index].velocity.y -= _gravity * _deltaTime;
-		_particles[index].elapsedTime += _deltaTime;
+		particle.position += particle.velocity * _deltaTime;
+		particle.scale = pow(particle.elapsedTime / particle.lifeTime, 3.0) * (particle.endScale - particle.startScale) + particle.startScale;
+		particle.velocity.y -= _gravity * _deltaTime;
+		particle.elapsedTime += _deltaTime;
 
 		// 消滅時間になったか判定
-		if (_particles[index].lifeTime < _particles[index].elapsedTime)
+		if (particle.lifeTime < particle.elapsedTime)
 		{
 			// パーティクルを非アクティブにする
-			_particles[index].isActive = false;
+			particle.isActive = false;
 			// 未使用リストに追加
-			_deadList.Append(index);
+			_deadParticlesBuffer.Append(index);
 		}
 		else
 		{
 			// 使用中リストに追加
-			_activeList.Append(index);
+			_activeParticlesBuffer.Append(index);
 		}
-
 	}
 
+	// バッファに再設定
+	_particlesBuffer[index] = particle;
 }

@@ -2,6 +2,7 @@
 using System.Linq;
 using System.Runtime.InteropServices;
 using UnityEngine;
+using Utility;
 
 public class GPUParticleRenderer : MonoBehaviour
 {
@@ -14,51 +15,18 @@ public class GPUParticleRenderer : MonoBehaviour
         const int NUM_THREAD_X = 32;
         #endregion
 
-        #region public variable
-        // 視界内のパーティクルの要素番号
-        public ComputeBuffer m_inViewsAppendBuffer;
-        // 視界内のパーティクルの個数
-        public ComputeBuffer m_inViewsCountBuffer;
-        // [0]インスタンスあたりの頂点数 [1]インスタンス数 [2]開始する頂点位置 [3]開始するインスタンス
-        public int[] m_inViewsCounts = { 0, 0, 0, 0 };
-        #endregion
 
         #region private variable
         // 視錘台
         private Plane[] m_planes = new Plane[4];
         // 視錘台の法線を分割した配列
         private float[] m_normalsFloat = new float[12];
-        #endregion
-
-        #region public method
-        // コンストラクタ
-        public CullingData(int _numParticles)
-        {
-            // コンピュートバッファの生成
-            m_inViewsAppendBuffer = new ComputeBuffer(_numParticles, Marshal.SizeOf(typeof(int)), ComputeBufferType.Append);
-            m_inViewsCountBuffer = new ComputeBuffer(4, Marshal.SizeOf(typeof(int)), ComputeBufferType.IndirectArguments);
-        }
-
-        // インスタンスあたりの頂点数を設定
-        public void SetVertexCount(int vertexCount)
-        {
-            m_inViewsCounts[0] = vertexCount;
-        }
-
-        // バッファの開放処理
-        public void ReleaseBuffers()
-        {
-            if (m_inViewsAppendBuffer != null)
-            {
-                m_inViewsAppendBuffer.Release();
-                m_inViewsAppendBuffer = null;
-            }
-            if (m_inViewsCountBuffer != null)
-            {
-                m_inViewsCountBuffer.Release();
-                m_inViewsCountBuffer = null;
-            }
-        }
+        // 視界内のパーティクルの要素番号
+        private ComputeBuffer m_inViewParticlesBuffer;
+        // 視界内のパーティクルの個数
+        private ComputeBuffer m_inViewCountsBuffer;
+        // [0]インスタンスあたりの頂点数 [1]インスタンス数 [2]開始する頂点位置 [3]開始するインスタンス
+        private int[] m_inViewCounts = { 0, 0, 0, 0 };
         #endregion
 
         #region private method
@@ -105,7 +73,7 @@ public class GPUParticleRenderer : MonoBehaviour
         }
 
         // 更新処理
-        public void Update(ComputeShader _computeShader, Camera _camera, int _numParticles, ComputeBuffer _particleBuffer, ComputeBuffer _activeList)
+        public void Update(ComputeShader _computeShader, Camera _camera, int _numParticles, ComputeBuffer _particlesBuffer, ComputeBuffer _activeParticlesBuffer)
         {
             // 視錘台カリングを行うカーネル
             int kernel = _computeShader.FindKernel("FrustumCulling");
@@ -123,29 +91,68 @@ public class GPUParticleRenderer : MonoBehaviour
             }
 
             // バッファのカウンターをリセット
-            m_inViewsAppendBuffer.SetCounterValue(0);
+            m_inViewParticlesBuffer.SetCounterValue(0);
 
             // カメラの座標
             Vector3 cameraPosition = _camera.transform.position;
 
             // 変数を設定
-            _computeShader.SetInt("_numParticles", _numParticles);
-            _computeShader.SetFloats("_cameraPosition", cameraPosition.x, cameraPosition.y, cameraPosition.z);
-            _computeShader.SetFloats("_cameraFrustumNormals", m_normalsFloat);
+            _computeShader.SetInt(ShaderDefines.GetIntPropertyID(ShaderDefines.IntID._numParticles), _numParticles);
+            _computeShader.SetFloats(ShaderDefines.GetVectorPropertyID(ShaderDefines.VectorID._cameraPosition), cameraPosition.x, cameraPosition.y, cameraPosition.z);
+            _computeShader.SetFloats(ShaderDefines.GetVectorPropertyID(ShaderDefines.VectorID._cameraFrustumNormals), m_normalsFloat);
 
             // バッファを設定
-            _computeShader.SetBuffer(kernel, "_particlesBuffer", _particleBuffer);
-            _computeShader.SetBuffer(kernel, "_particleActiveList", _activeList);
-            _computeShader.SetBuffer(kernel, "_inViewAppend", m_inViewsAppendBuffer);
+            _computeShader.SetBuffer(kernel, ShaderDefines.GetBufferPropertyID(ShaderDefines.BufferID._particlesBuffer), _particlesBuffer);
+            _computeShader.SetBuffer(kernel, ShaderDefines.GetBufferPropertyID(ShaderDefines.BufferID._activeParticlesBuffer), _activeParticlesBuffer);
+            _computeShader.SetBuffer(kernel, ShaderDefines.GetBufferPropertyID(ShaderDefines.BufferID._inViewParticlesBuffer), m_inViewParticlesBuffer);
 
             // カーネルを実行
-            _computeShader.Dispatch(kernel, Mathf.CeilToInt((float)_activeList.count / NUM_THREAD_X), 1, 1);
+            _computeShader.Dispatch(kernel, Mathf.CeilToInt((float)_activeParticlesBuffer.count / NUM_THREAD_X), 1, 1);
 
             // バッファにデータを渡す
-            m_inViewsCountBuffer.SetData(m_inViewsCounts);
+            m_inViewCountsBuffer.SetData(m_inViewCounts);
 
             // 視界内のパーティクル数を取得
-            ComputeBuffer.CopyCount(m_inViewsAppendBuffer, m_inViewsCountBuffer, 4);
+            ComputeBuffer.CopyCount(m_inViewParticlesBuffer, m_inViewCountsBuffer, 4);
+        }
+        #endregion
+
+        #region getter
+        // 視界内のパーティクルの要素番号バッファを取得する
+        public ComputeBuffer GetInViewParticlesBuffer() { return m_inViewParticlesBuffer; }
+
+        // 視界内のパーティクルの個数を取得する
+        public ComputeBuffer GetInViewCountsBuffer() { return m_inViewCountsBuffer; }
+        #endregion
+
+        #region public method
+        // コンストラクタ
+        public CullingData(int _numParticles)
+        {
+            // コンピュートバッファの生成
+            m_inViewParticlesBuffer = new ComputeBuffer(_numParticles, Marshal.SizeOf(typeof(int)), ComputeBufferType.Append);
+            m_inViewCountsBuffer = new ComputeBuffer(4, Marshal.SizeOf(typeof(int)), ComputeBufferType.IndirectArguments);
+        }
+
+        // インスタンスあたりの頂点数を設定
+        public void SetVertexCount(int vertexCount)
+        {
+            m_inViewCounts[0] = vertexCount;
+        }
+
+        // バッファの開放処理
+        public void ReleaseBuffers()
+        {
+            if (m_inViewParticlesBuffer != null)
+            {
+                m_inViewParticlesBuffer.Release();
+                m_inViewParticlesBuffer = null;
+            }
+            if (m_inViewCountsBuffer != null)
+            {
+                m_inViewCountsBuffer.Release();
+                m_inViewCountsBuffer = null;
+            }
         }
         #endregion
     }
@@ -182,14 +189,14 @@ public class GPUParticleRenderer : MonoBehaviour
     // パーティクル情報
     private ComputeBuffer m_particlesBuffer;
     // 使用中のパーティクルの要素番号
-    private ComputeBuffer m_activeIndexBuffer;
+    private ComputeBuffer m_activeParticlesBuffer;
     // 使用中のパーティクルの個数
     private ComputeBuffer m_activeCountBuffer;
     // カメラごとのカリング情報
     private Dictionary<Camera, CullingData> m_cameraDatas = new Dictionary<Camera, CullingData>();
     // メッシュ情報のバッファ
     private ComputeBuffer m_meshIndicesBuffer;
-    private ComputeBuffer m_meshVertexDataBuffer;
+    private ComputeBuffer m_meshVertexDatasBuffer;
     // メッシュの頂点番号数
     private int m_numMeshIndices;
     #endregion
@@ -208,7 +215,7 @@ public class GPUParticleRenderer : MonoBehaviour
             // パーティクルマネージャーの情報を取得する
             m_numParticles = particle.GetParticleNum();
             m_particlesBuffer = particle.GetParticleBuffer();
-            m_activeIndexBuffer = particle.GetActiveParticleBuffer();
+            m_activeParticlesBuffer = particle.GetActiveParticleBuffer();
             m_activeCountBuffer = particle.GetParticleCountBuffer();
         }
         else
@@ -216,13 +223,6 @@ public class GPUParticleRenderer : MonoBehaviour
             Debug.LogError("Particle Class Not Found!!" + typeof(GPUParticleManager).FullName);
         }
 
-        // メッシュ情報バッファの初期化処理
-        InitMeshDataBuffer(_mesh, out m_meshVertexDataBuffer, out m_meshIndicesBuffer, out m_numMeshIndices);
-    }
-
-    // メッシュ情報バッファの初期化処理
-    private void InitMeshDataBuffer(Mesh _mesh, out ComputeBuffer _vertexDatasBuffer, out ComputeBuffer _indicesBuffer, out int _numIndices)
-    {
         // メッシュの頂点番号を取得
         int[] indices = _mesh.GetIndices(0);
 
@@ -238,15 +238,15 @@ public class GPUParticleRenderer : MonoBehaviour
         }).ToArray();
 
         // 頂点番号数を取得
-        _numIndices = indices.Length;
+        m_numMeshIndices = indices.Length;
 
         // バッファを生成
-        _vertexDatasBuffer = new ComputeBuffer(vertexDatas.Length, Marshal.SizeOf(typeof(VertexData)));
-        _indicesBuffer = new ComputeBuffer(indices.Length, Marshal.SizeOf(typeof(uint)));
+        m_meshVertexDatasBuffer = new ComputeBuffer(vertexDatas.Length, Marshal.SizeOf(typeof(VertexData)));
+        m_meshIndicesBuffer = new ComputeBuffer(indices.Length, Marshal.SizeOf(typeof(uint)));
 
         // バッファにデータを渡す
-        _vertexDatasBuffer.SetData(vertexDatas);
-        _indicesBuffer.SetData(indices);
+        m_meshVertexDatasBuffer.SetData(vertexDatas);
+        m_meshIndicesBuffer.SetData(indices);
     }
 
     // カメラごとのカリングデータの更新処理
@@ -264,7 +264,7 @@ public class GPUParticleRenderer : MonoBehaviour
         }
 
         // カリングデータの更新処理
-        data.Update(_cullingComputeShader, _camera, m_numParticles, m_particlesBuffer, m_activeIndexBuffer);
+        data.Update(_cullingComputeShader, _camera, m_numParticles, m_particlesBuffer, m_activeParticlesBuffer);
     }
 
     // カリングを行うカメラの更新処理
@@ -292,13 +292,12 @@ public class GPUParticleRenderer : MonoBehaviour
     private void SetMaterialParam()
     {
         // 変数の設定
-        _shaderMaterial.SetTexture("_mainTexture", _texture);
-        _shaderMaterial.SetBuffer("_vertices", m_meshVertexDataBuffer);
-        _shaderMaterial.SetBuffer("_indices", m_meshIndicesBuffer);
+        _shaderMaterial.SetTexture(ShaderDefines.GetTexturePropertyID(ShaderDefines.TextureID._mainTexture), _texture);
 
         // バッファの設定
-        _shaderMaterial.SetBuffer("_particles", m_particlesBuffer);
-        _shaderMaterial.SetBuffer("_particleActiveList", m_activeIndexBuffer);
+        _shaderMaterial.SetBuffer(ShaderDefines.GetBufferPropertyID(ShaderDefines.BufferID._meshIndicesBuffer), m_meshIndicesBuffer);
+        _shaderMaterial.SetBuffer(ShaderDefines.GetBufferPropertyID(ShaderDefines.BufferID._meshVertexDatasBuffer), m_meshVertexDatasBuffer);
+        _shaderMaterial.SetBuffer(ShaderDefines.GetBufferPropertyID(ShaderDefines.BufferID._particlesBuffer), m_particlesBuffer);
 
         // パスの設定
         _shaderMaterial.SetPass(0);
@@ -331,13 +330,13 @@ public class GPUParticleRenderer : MonoBehaviour
                     SetMaterialParam();
 
                     // バッファを設定
-                    _shaderMaterial.SetBuffer("_inViewsList", data.m_inViewsAppendBuffer);
+                    _shaderMaterial.SetBuffer(ShaderDefines.GetBufferPropertyID(ShaderDefines.BufferID._inViewParticlesBuffer), data.GetInViewParticlesBuffer());
 
                     // キーワードを有効化
                     _shaderMaterial.EnableKeyword("GPUPARTICLE_CULLING_ON");
 
                     // 描画処理
-                    Graphics.DrawProceduralIndirect(MeshTopology.Triangles, data.m_inViewsCountBuffer);
+                    Graphics.DrawProceduralIndirect(MeshTopology.Triangles, data.GetInViewCountsBuffer());
                 }
             }
         }
@@ -345,6 +344,9 @@ public class GPUParticleRenderer : MonoBehaviour
         {
             // シェーダーの値の設定
             SetMaterialParam();
+
+            // バッファを設定
+            _shaderMaterial.SetBuffer(ShaderDefines.GetBufferPropertyID(ShaderDefines.BufferID._activeParticlesBuffer), m_activeParticlesBuffer);
 
             // キーワードを無効化
             _shaderMaterial.DisableKeyword("GPUPARTICLE_CULLING_ON");
@@ -365,10 +367,10 @@ public class GPUParticleRenderer : MonoBehaviour
             m_meshIndicesBuffer.Release();
             m_meshIndicesBuffer = null;
         }
-        if (m_meshVertexDataBuffer != null)
+        if (m_meshVertexDatasBuffer != null)
         {
-            m_meshVertexDataBuffer.Release();
-            m_meshVertexDataBuffer = null;
+            m_meshVertexDatasBuffer.Release();
+            m_meshVertexDatasBuffer = null;
         }
     }
     #endregion

@@ -48,12 +48,12 @@
 			float4 color : COLOR;
 		};
 
-		// メッシュの頂点の要素番号
-		StructuredBuffer<uint> _indices;
-		// メッシュの頂点情報
-		StructuredBuffer<VertexData> _vertices;
 		// パーティクル情報
-		StructuredBuffer<GPUParticleData> _particles;
+		StructuredBuffer<GPUParticleData> _particlesBuffer;
+		// メッシュの頂点の要素番号
+		StructuredBuffer<uint> _meshIndicesBuffer;
+		// メッシュの頂点情報
+		StructuredBuffer<VertexData> _meshVertexDatasBuffer;
 
 		// テクスチャ
 		sampler2D _mainTexture;
@@ -61,10 +61,10 @@
 		v2f vert(uint vid : SV_VertexID, uint iid : SV_InstanceID)
 		{
 			// 頂点情報バッファの要素番号
-			uint idx = _indices[vid];
+			uint idx = _meshIndicesBuffer[vid];
 
 			// 頂点情報を取り出す
-			VertexData vertex = _vertices[idx];
+			VertexData vertex = _meshVertexDatasBuffer[idx];
 			float4 pos = float4(vertex.vertex, 1.0);
 			float2 uv = vertex.uv;
 			float3 normal = vertex.normal;
@@ -73,7 +73,7 @@
 			uint iidx = GetParticleIndex(iid);
 
 			// パーティクル情報を取り出す
-			GPUParticleData particle = _particles[iidx];
+			GPUParticleData particle = _particlesBuffer[iidx];
 
 			// 座標を計算
 			pos.xyz *= particle.scale;

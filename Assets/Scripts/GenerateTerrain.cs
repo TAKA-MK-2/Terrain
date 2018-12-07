@@ -1,5 +1,5 @@
-﻿using System.Collections.Generic;
-using UnityEngine;
+﻿using UnityEngine;
+using Utility;
 
 public class GenerateTerrain : MonoBehaviour
 {
@@ -40,14 +40,12 @@ public class GenerateTerrain : MonoBehaviour
     private int m_kernelID;
     // スレッドグループ数
     private int m_numThreadGroups;
-    // 頂点データバッファ
-    private ComputeBuffer m_vertexBuffer;
-    // GPUインスタンシングの引数バッファ
+    // 頂点座標
+    private ComputeBuffer m_verticesBuffer;
+    // GPUインスタンシングの引数
     private ComputeBuffer m_argsBuffer;
     // GPUインスタンシングの引数
     private uint[] m_args = new uint[5] { 0, 0, 0, 0, 0 };
-    // 当たり判定用のMesh
-    private Mesh m_collisionMesh;
     #endregion
 
     // private 関数
@@ -59,9 +57,9 @@ public class GenerateTerrain : MonoBehaviour
         _numVertices = Mathf.CeilToInt(_numVertices / (float)THREAD_NUM) * THREAD_NUM;
         m_numVertices = _numVertices * _numVertices;
         m_distance = FIELD_SIZE / _numVertices;
-        m_kernelID = _computeShader.FindKernel("CalculateVertex");
+        m_kernelID = _computeShader.FindKernel("CalculateVertices");
         m_numThreadGroups = _numVertices / THREAD_NUM;
-        m_vertexBuffer = new ComputeBuffer(m_numVertices, System.Runtime.InteropServices.Marshal.SizeOf(typeof(Vector3)));
+        m_verticesBuffer = new ComputeBuffer(m_numVertices, System.Runtime.InteropServices.Marshal.SizeOf(typeof(Vector3)));
         m_argsBuffer = new ComputeBuffer(1, m_args.Length * sizeof(uint), ComputeBufferType.IndirectArguments);
 
         // メッシュの頂点数
@@ -77,15 +75,15 @@ public class GenerateTerrain : MonoBehaviour
     void CalculateVertex()
     {
         // バッファを設定
-        _computeShader.SetBuffer(m_kernelID, "_vertexBuffer", m_vertexBuffer);
+        _computeShader.SetBuffer(m_kernelID, ShaderDefines.GetBufferPropertyID(ShaderDefines.BufferID._verticesBuffer), m_verticesBuffer);
 
         // 変数を設定
-        _computeShader.SetFloat("_fieldSize", FIELD_SIZE);
-        _computeShader.SetInt("_numVertice", _numVertices);
-        _computeShader.SetFloat("_distance", m_distance);
-        _computeShader.SetFloat("_height", _height);
-        _computeShader.SetFloat("_smoothness", _smoothness * _numVertices);
-        _computeShader.SetVector("_offset", new Vector2(_offsetX, _offsetY));
+        _computeShader.SetFloat(ShaderDefines.GetFloatPropertyID(ShaderDefines.FloatID._fieldSize), FIELD_SIZE);
+        _computeShader.SetInt(ShaderDefines.GetIntPropertyID(ShaderDefines.IntID._numVertices), _numVertices);
+        _computeShader.SetFloat(ShaderDefines.GetFloatPropertyID(ShaderDefines.FloatID._distance), m_distance);
+        _computeShader.SetFloat(ShaderDefines.GetFloatPropertyID(ShaderDefines.FloatID._height), _height);
+        _computeShader.SetFloat(ShaderDefines.GetFloatPropertyID(ShaderDefines.FloatID._smoothness), _smoothness * _numVertices);
+        _computeShader.SetVector(ShaderDefines.GetVectorPropertyID(ShaderDefines.VectorID._offset), new Vector2(_offsetX, _offsetY));
 
         // カーネルの実行
         _computeShader.Dispatch(m_kernelID, m_numThreadGroups, 1, m_numThreadGroups);
@@ -95,24 +93,26 @@ public class GenerateTerrain : MonoBehaviour
     void RenderTerrain()
     {
         // 変数を設定
-        _shaderMaterial.SetInt("_numVertices", _numVertices);
-        _shaderMaterial.SetFloat("_distance", m_distance);
-        _shaderMaterial.SetBuffer("_vertexBuffer", m_vertexBuffer);
+        _shaderMaterial.SetInt(ShaderDefines.GetIntPropertyID(ShaderDefines.IntID._numVertices), _numVertices);
+        _shaderMaterial.SetFloat(ShaderDefines.GetFloatPropertyID(ShaderDefines.FloatID._distance), m_distance);
+        _shaderMaterial.SetBuffer(ShaderDefines.GetBufferPropertyID(ShaderDefines.BufferID._verticesBuffer), m_verticesBuffer);
 
         // 描画処理
         Graphics.DrawMeshInstancedIndirect(_mesh, 0, _shaderMaterial, new Bounds(Vector3.zero, new Vector3(100.0f, 100.0f, 100.0f)), m_argsBuffer);
     }
 
-    // バッファの開放
+    // バッファの開放処理
     void ReleaseBuffer()
     {
-        if (m_vertexBuffer != null)
+        if (m_verticesBuffer != null)
         {
-            m_vertexBuffer.Release();
+            m_verticesBuffer.Release();
+            m_verticesBuffer = null;
         }
         if (m_argsBuffer != null)
         {
             m_argsBuffer.Release();
+            m_verticesBuffer = null;
         }
     }
     #endregion

@@ -1,6 +1,4 @@
 ﻿using UnityEngine;
-using System.Collections;
-using System.Collections.Generic;
 
 namespace Utility
 {
@@ -8,66 +6,92 @@ namespace Utility
     {
         public enum TextureID
         {
-            _MainTex,
-            _MainTex2,
+            // Terrain
+
+            // ParticleEffect
+            _mainTexture,
 
             _length
         }
 
         public enum IntID
         {
-            _emitNum,
+            // Terrain
+            _numVertices,
+
+            // ParticleEffect
+            _numParticles,
 
             _length
         }
 
         public enum BoolID
         {
+            // Terrain
+
+            // ParticleEffect
+
             _length
         }
 
         public enum FloatID
         {
+            // Terrain
+            _fieldSize,
+            _distance,
+            _height,
+            _smoothness,
+
+            // ParticleEffect
             _gravity,
+            _elapsedTime,
             _startScale,
             _endScale,
             _lifeTime,
-            _sai,
-            _val,
             _deltaTime,
-            _elapsedTime,
 
             _length
         }
 
         public enum ColorID
         {
-            _color,
+            // Terrain
+
+            // ParticleEffect
 
             _length
         }
 
         public enum VectorID
         {
+            // Terrain
+            _offset,
+
+            // ParticleEffect
             _position,
             _range,
-            _direction,
             _minVelocity,
             _maxVelocity,
-            _angVelocity,
-            _rotationOffsetAxis,
             _color,
-            
+            _cameraPosition,
+            _cameraFrustumNormals,
+
             _length
         }
 
         public enum BufferID
         {
-            _particles,
-            _particlePool,
-            _deadList,
-            _activeList,
-            _emitList,
+            // Terrain
+            _verticesBuffer,
+
+            // ParticleEffect
+            _particlesBuffer,
+            _activeParticlesBuffer,
+            _deadParticlesBuffer,
+            _particlePoolBuffer,
+            _inViewParticlesBuffer,
+            _meshIndicesBuffer,
+            _meshVertexDatasBuffer,
 
             _length
         }
