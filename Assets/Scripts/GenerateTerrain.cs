@@ -6,7 +6,7 @@ public class GenerateTerrain : MonoBehaviour
     // 定数
     #region define
     //フィールドのサイズ
-    private const float FIELD_SIZE = (20f);
+    private const float FIELD_SIZE = (100f);
     #endregion
 
     // エディター上で設定する変数
@@ -14,9 +14,9 @@ public class GenerateTerrain : MonoBehaviour
     // コンピュートシェーダー
     [SerializeField] ComputeShader _computeShader;
     // 1辺の頂点数
-    [SerializeField] [Range(8, 64)] int _numVertice = 8;
+    [SerializeField] [Range(8, 512)] int _numVertice = 8;
     // 高さ
-    [SerializeField] [Range(1.0f, 10.0f)] float _height = 5.0f;
+    [SerializeField] [Range(1.0f, 100.0f)] float _height = 40.0f;
     // 滑らかさ
     [SerializeField] [Range(0.1f, 1f)] float _smoothness = 0.5f;
     // ノイズの取得位置
