@@ -99,6 +99,7 @@ public class GenerateTerrain : MonoBehaviour
         
         // 変数を設定
         _shaderMaterial.SetInt(ShaderDefines.GetIntPropertyID(ShaderDefines.IntID._numVertices), _numVertices);
+        _shaderMaterial.SetFloat(ShaderDefines.GetFloatPropertyID(ShaderDefines.FloatID._height), _height);
 
         // バッファの設定
         _shaderMaterial.SetBuffer(ShaderDefines.GetBufferPropertyID(ShaderDefines.BufferID._verticesBuffer), m_verticesBuffer);

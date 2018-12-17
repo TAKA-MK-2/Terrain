@@ -76,14 +76,11 @@ float _deltaTime;
 
 // 初期化処理
 [numthreads(THREAD_NUM_X, 1, 1)]
-void Init(uint3 id : SV_DispatchThreadID)
+void Init(uint id : SV_DispatchThreadID)
 {
-	// 要素番号
-	uint index = id.x;
-
-	// 未使用リストに追加に追加
-	_particlesBuffer[index].isActive = false;
-	_deadParticlesBuffer.Append(index);
+	// 未使用リストに追加
+	_particlesBuffer[id].isActive = false;
+	_deadParticlesBuffer.Append(id);
 }
 
 // エミット処理
@@ -91,13 +88,13 @@ void Init(uint3 id : SV_DispatchThreadID)
 void Emit()
 {
 	// 要素番号をパーティクルプールから取り出す
-	uint index = _particlePoolBuffer.Consume();
+	uint id = _particlePoolBuffer.Consume();
 
 	// バッファからパーティクル情報を取り出す
-	GPUParticleData particle = _particlesBuffer[index];
+	GPUParticleData particle = _particlesBuffer[id];
 
 	// 値をランダム化
-	float2 seed = float2(index, index + 1) * _elapsedTime % 10000;
+	float2 seed = float2(id, id + 1) * _elapsedTime % 10000;
 
 	// パーティクルを設定
 	particle.isActive = true;
@@ -111,18 +108,15 @@ void Emit()
 	particle.elapsedTime = 0;
 
 	// バッファに再設定
-	_particlesBuffer[index] = particle;
+	_particlesBuffer[id] = particle;
 }
 
 // 更新処理
 [numthreads(THREAD_NUM_X, 1, 1)]
-void Update(uint3 id : SV_DispatchThreadID)
+void Update(uint id : SV_DispatchThreadID)
 {
-	// 要素番号
-	uint index = id.x;
-
 	// バッファからパーティクル情報を取り出す
-	GPUParticleData particle = _particlesBuffer[index];
+	GPUParticleData particle = _particlesBuffer[id];
 
 	// アクティブか判定
 	if (particle.isActive)
@@ -139,15 +133,15 @@ void Update(uint3 id : SV_DispatchThreadID)
 			// パーティクルを非アクティブにする
 			particle.isActive = false;
 			// 未使用リストに追加
-			_deadParticlesBuffer.Append(index);
+			_deadParticlesBuffer.Append(id);
 		}
 		else
 		{
 			// 使用中リストに追加
-			_activeParticlesBuffer.Append(index);
+			_activeParticlesBuffer.Append(id);
 		}
 	}
 
 	// バッファに再設定
-	_particlesBuffer[index] = particle;
+	_particlesBuffer[id] = particle;
 }

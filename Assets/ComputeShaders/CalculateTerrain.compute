@@ -19,12 +19,6 @@ float _smoothness;
 // ノイズの取得位置
 float2 _offset;
 
-// floatの乱数生成
-float random(float2 p) 
-{
-	return frac(sin(dot(p, float2(12.9898, 78.233))) * 43758.5453);
-}
-
 // float2の乱数生成
 float2 random2(float2 st) 
 {
@@ -68,16 +62,19 @@ float fBm(float2 st)
 	return f;
 }
 
-// メインカーネル
+// 頂点計算
 [numthreads(THREAD_NUM, 1, THREAD_NUM)]
 void CalculateVertices(uint3 id : SV_DispatchThreadID)
 {
-	// バッファの要素番号
+	// バッファの要素番号の計算
 	int index = (id.z * _numVertices) + id.x;
-	// 頂点座標を計算
+	// ノイズの取得
+	float2 seed = float2(id.x + _offset.x, id.z + _offset.y) / _smoothness;
+	float noise = perlinNoise(seed);
+	// 頂点座標の計算
 	float3 vertex;
 	vertex.x = id.x * _distance + (_distance / 2.0) - (_fieldSize / 2.0);
-	vertex.y = _height * (fBm(float2(id.x + _offset.x, id.z + _offset.y) / _smoothness));
+	vertex.y = _height * noise;
 	vertex.z = id.z * _distance + (_distance / 2.0) - (_fieldSize / 2.0);
 	_verticesBuffer[index] = vertex;
 }

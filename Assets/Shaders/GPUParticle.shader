@@ -48,12 +48,12 @@
 			float4 color : COLOR;
 		};
 
-		// パーティクル情報
-		StructuredBuffer<GPUParticleData> _particlesBuffer;
 		// メッシュの頂点の要素番号
 		StructuredBuffer<uint> _meshIndicesBuffer;
 		// メッシュの頂点情報
 		StructuredBuffer<VertexData> _meshVertexDatasBuffer;
+		// パーティクル情報
+		StructuredBuffer<GPUParticleData> _particlesBuffer;
 
 		// テクスチャ
 		sampler2D _mainTexture;
