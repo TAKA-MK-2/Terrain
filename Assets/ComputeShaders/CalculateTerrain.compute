@@ -1,7 +1,10 @@
 ﻿#pragma kernel CalculateVertices
+#pragma kernel PutFootsteps
 
 // スレッド数
 #define THREAD_NUM 8
+// プレイヤーの半径
+#define PLAYER_RADIUS 5
 
 // 頂点座標
 RWStructuredBuffer<float3> _verticesBuffer;
@@ -18,6 +21,8 @@ float _height;
 float _smoothness;
 // ノイズの取得位置
 float2 _offset;
+// プレイヤーの座標
+float3 _playerPosition;
 
 // float2の乱数生成
 float2 random2(float2 st) 
@@ -77,4 +82,18 @@ void CalculateVertices(uint3 id : SV_DispatchThreadID)
 	vertex.y = _height * noise;
 	vertex.z = id.z * _distance + (_distance / 2.0) - (_fieldSize / 2.0);
 	_verticesBuffer[index] = vertex;
+}
+
+[numthreads(THREAD_NUM * THREAD_NUM, 1, 1)]
+void PutFootsteps(uint id : SV_DispatchThreadID)
+{
+	// 頂点座標の計算
+	float3 vertex = _verticesBuffer[id];
+	// 足跡内に頂点があるか判定
+	double chk_distance = PLAYER_RADIUS * PLAYER_RADIUS;
+	if ((vertex.x - _playerPosition.x)*(vertex.x - _playerPosition.x) + (vertex.y - _playerPosition.y)*(vertex.y - _playerPosition.y) + (vertex.z - _playerPosition.z)*(vertex.z - _playerPosition.z) <= chk_distance)
+	{
+		vertex.y -= 1;
+	}
+	_verticesBuffer[id] = vertex;
 }

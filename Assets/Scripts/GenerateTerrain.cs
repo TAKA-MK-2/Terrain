@@ -38,8 +38,10 @@ public class GenerateTerrain : MonoBehaviour
     private int m_numVertices;
     // 頂点間の距離
     private float m_distance;
-    // カーネルID
-    private int m_kernelID;
+    // 頂点計算カーネル
+    private int m_calculateKernel;
+    // 足跡カーネル
+    private int m_putKernel;
     // スレッドグループ数
     private int m_numThreadGroups;
     // 頂点座標
@@ -50,7 +52,7 @@ public class GenerateTerrain : MonoBehaviour
     private uint[] m_args = new uint[5] { 0, 0, 0, 0, 0 };
     #endregion
 
-    // private 関数
+    // private関数
     #region private method
     // 初期化処理
     void Initialize()
@@ -59,7 +61,8 @@ public class GenerateTerrain : MonoBehaviour
         _numVertices = Mathf.CeilToInt(_numVertices / (float)THREAD_NUM) * THREAD_NUM;
         m_numVertices = _numVertices * _numVertices;
         m_distance = FIELD_SIZE / _numVertices;
-        m_kernelID = _computeShader.FindKernel("CalculateVertices");
+        m_calculateKernel = _computeShader.FindKernel("CalculateVertices");
+        m_putKernel = _computeShader.FindKernel("PutFootsteps");
         m_numThreadGroups = _numVertices / THREAD_NUM;
         m_verticesBuffer = new ComputeBuffer(m_numVertices, System.Runtime.InteropServices.Marshal.SizeOf(typeof(Vector3)));
         m_argsBuffer = new ComputeBuffer(1, m_args.Length * sizeof(uint), ComputeBufferType.IndirectArguments);
@@ -77,7 +80,7 @@ public class GenerateTerrain : MonoBehaviour
     void CalculateVertex()
     {
         // バッファを設定
-        _computeShader.SetBuffer(m_kernelID, ShaderDefines.GetBufferPropertyID(ShaderDefines.BufferID._verticesBuffer), m_verticesBuffer);
+        _computeShader.SetBuffer(m_calculateKernel, ShaderDefines.GetBufferPropertyID(ShaderDefines.BufferID._verticesBuffer), m_verticesBuffer);
 
         // 変数を設定
         _computeShader.SetFloat(ShaderDefines.GetFloatPropertyID(ShaderDefines.FloatID._fieldSize), FIELD_SIZE);
@@ -88,7 +91,7 @@ public class GenerateTerrain : MonoBehaviour
         _computeShader.SetVector(ShaderDefines.GetVectorPropertyID(ShaderDefines.VectorID._offset), new Vector2(_offsetX, _offsetY));
 
         // カーネルの実行
-        _computeShader.Dispatch(m_kernelID, m_numThreadGroups, 1, m_numThreadGroups);
+        _computeShader.Dispatch(m_calculateKernel, m_numThreadGroups, 1, m_numThreadGroups);
     }
 
     // 地形描画
@@ -136,6 +139,19 @@ public class GenerateTerrain : MonoBehaviour
         ReleaseBuffer();
         Initialize();
         CalculateVertex();
+    }
+
+    void Update()
+    {
+        if (Input.GetKeyDown(KeyCode.Space))
+        {
+            int x = Random.Range(-50, 50);
+            int y = Random.Range(0, 25);
+            int z = Random.Range(-50, 50);
+            _computeShader.SetVector("_playerPosition", new Vector3(x, y, z));
+            _computeShader.SetBuffer(m_putKernel, ShaderDefines.GetBufferPropertyID(ShaderDefines.BufferID._verticesBuffer), m_verticesBuffer);
+            _computeShader.Dispatch(m_putKernel, m_numThreadGroups * m_numThreadGroups, 1, 1);
+        }
     }
 
     void OnRenderObject()

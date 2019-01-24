@@ -387,12 +387,12 @@ PrefabInstance:
     - target: {fileID: 3999366258538610305, guid: 2e246ec5700ef7342849305327584a2f,
         type: 3}
       propertyPath: _height
-      value: 30
+      value: 25
       objectReference: {fileID: 0}
     - target: {fileID: 3999366258538610305, guid: 2e246ec5700ef7342849305327584a2f,
         type: 3}
       propertyPath: _numVertices
-      value: 512
+      value: 256
       objectReference: {fileID: 0}
     - target: {fileID: 3999366258538610305, guid: 2e246ec5700ef7342849305327584a2f,
         type: 3}
@@ -404,5 +404,10 @@ PrefabInstance:
       propertyPath: _texture
       value: 
       objectReference: {fileID: 2800000, guid: 4bf2d49c4737cdd4ba445c271ebcd2db, type: 3}
+    - target: {fileID: 3999366258538610305, guid: 2e246ec5700ef7342849305327584a2f,
+        type: 3}
+      propertyPath: _smoothness
+      value: 1
+      objectReference: {fileID: 0}
     m_RemovedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 2e246ec5700ef7342849305327584a2f, type: 3}
