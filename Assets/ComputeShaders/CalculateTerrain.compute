@@ -22,7 +22,7 @@ float _smoothness;
 // ノイズの取得位置
 float2 _offset;
 // プレイヤーの座標
-float3 _playerPosition;
+float2 _playerPosition;
 
 // float2の乱数生成
 float2 random2(float2 st) 
@@ -89,11 +89,14 @@ void PutFootsteps(uint id : SV_DispatchThreadID)
 {
 	// 頂点座標の計算
 	float3 vertex = _verticesBuffer[id];
-	// 足跡内に頂点があるか判定
-	double chk_distance = PLAYER_RADIUS * PLAYER_RADIUS;
-	if ((vertex.x - _playerPosition.x)*(vertex.x - _playerPosition.x) + (vertex.y - _playerPosition.y)*(vertex.y - _playerPosition.y) + (vertex.z - _playerPosition.z)*(vertex.z - _playerPosition.z) <= chk_distance)
+	// 三平方の定理
+	double horizontal = (vertex.x - _playerPosition.x) * (vertex.x - _playerPosition.x);
+	double vertical = (vertex.z - _playerPosition.y) * (vertex.z - _playerPosition.y);
+	double slant = PLAYER_RADIUS * PLAYER_RADIUS;
+	// 足跡内にあるか判定
+	if (horizontal + vertical <= slant)
 	{
-		vertex.y -= 1;
+		vertex.y -= PLAYER_RADIUS;
 	}
 	_verticesBuffer[id] = vertex;
 }

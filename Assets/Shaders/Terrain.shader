@@ -43,17 +43,8 @@
 				// 座標
 				float3 vertex = _verticesBuffer[index];
 
-				//// 色相
-				//float3 hue = float3(0, 1, 0);
-				//// 明度
-				//float brightness = (instanceID / (_numVertices - 1)) / float(_numVertices - 1);
-				//// 彩度
-				//float chroma = (instanceID % (_numVertices - 1)) / float(_numVertices - 1);
-				//// 色情報
-				//float3 color = (float3(1, 1, 1) * brightness) + ((hue - float3(1, 1, 1)) * chroma);
-
-				float brightness = vertex.y / _height;
-				float3 color = float3(brightness, brightness, brightness);
+				float val = vertex.y / _height;
+				float3 color = float3(val, val, val);
 				
 				// 透明度
 				float alpha = 1;

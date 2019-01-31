@@ -1,7 +1,7 @@
 ﻿using UnityEngine;
 using Utility;
 
-public class GenerateTerrain : MonoBehaviour
+public class TerrainManager : MonoBehaviour
 {
     // 定数
     #region define
@@ -99,7 +99,7 @@ public class GenerateTerrain : MonoBehaviour
     {
         // テクスチャを設定
         _shaderMaterial.SetTexture(ShaderDefines.GetTexturePropertyID(ShaderDefines.TextureID._mainTexture), _texture);
-        
+
         // 変数を設定
         _shaderMaterial.SetInt(ShaderDefines.GetIntPropertyID(ShaderDefines.IntID._numVertices), _numVertices);
         _shaderMaterial.SetFloat(ShaderDefines.GetFloatPropertyID(ShaderDefines.FloatID._height), _height);
@@ -127,6 +127,21 @@ public class GenerateTerrain : MonoBehaviour
     }
     #endregion
 
+    // public関数
+    #region public method
+    public void PutFootsteps(Vector3 _position)
+    {
+        // バッファを設定
+        _computeShader.SetBuffer(m_putKernel, ShaderDefines.GetBufferPropertyID(ShaderDefines.BufferID._verticesBuffer), m_verticesBuffer);
+
+        // 変数を設定
+        _computeShader.SetVector(ShaderDefines.GetVectorPropertyID(ShaderDefines.VectorID._playerPosition), new Vector2(_position.x, _position.z));
+
+        // カーネルの実行
+        _computeShader.Dispatch(m_putKernel, m_numThreadGroups * m_numThreadGroups, 1, 1);
+    }
+    #endregion
+
     void OnValidate()
     {
         ReleaseBuffer();
@@ -139,19 +154,6 @@ public class GenerateTerrain : MonoBehaviour
         ReleaseBuffer();
         Initialize();
         CalculateVertex();
-    }
-
-    void Update()
-    {
-        if (Input.GetKeyDown(KeyCode.Space))
-        {
-            int x = Random.Range(-50, 50);
-            int y = Random.Range(0, 25);
-            int z = Random.Range(-50, 50);
-            _computeShader.SetVector("_playerPosition", new Vector3(x, y, z));
-            _computeShader.SetBuffer(m_putKernel, ShaderDefines.GetBufferPropertyID(ShaderDefines.BufferID._verticesBuffer), m_verticesBuffer);
-            _computeShader.Dispatch(m_putKernel, m_numThreadGroups * m_numThreadGroups, 1, 1);
-        }
     }
 
     void OnRenderObject()

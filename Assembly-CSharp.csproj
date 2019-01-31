@@ -63,20 +63,18 @@
   <ItemGroup>
     <Compile Include="Assets\Scripts\CameraRotate.cs" />
     <Compile Include="Assets\Scripts\FPSCounter.cs" />
-    <Compile Include="Assets\Scripts\GenerateTerrain.cs" />
     <Compile Include="Assets\Scripts\GPUParticleEmitter.cs" />
     <Compile Include="Assets\Scripts\GPUParticleManager.cs" />
     <Compile Include="Assets\Scripts\GPUParticleRenderer.cs" />
+    <Compile Include="Assets\Scripts\PlayerController.cs" />
     <Compile Include="Assets\Scripts\ShaderDefines.cs" />
-    <Compile Include="Assets\Scripts\TerrainRenderer.cs" />
+    <Compile Include="Assets\Scripts\TerrainManager.cs" />
     <Compile Include="Assets\Scripts\TestEmit.cs" />
-    <Compile Include="Assets\Scripts\TestFootsteps.cs" />
     <None Include="Assets\Shaders\Terrain.shader" />
     <None Include="Assets\Shaders\GPUParticleCommon.cginc" />
     <None Include="Assets\Shaders\Libs\ColorUtil.cginc" />
     <None Include="Assets\ComputeShaders\GPUParticleCulling.compute" />
     <None Include="Assets\Shaders\GPUParticle.shader" />
-    <None Include="Assets\ComputeShaders\FootSteps.compute" />
     <None Include="Assets\ComputeShaders\CalculateTerrain.compute" />
     <None Include="Assets\Shaders\Libs\Quaternion.cginc" />
     <None Include="Assets\ComputeShaders\GPUParticle.compute" />

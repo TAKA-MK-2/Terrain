@@ -66,6 +66,7 @@ namespace Utility
         {
             // Terrain
             _offset,
+            _playerPosition,
 
             // ParticleEffect
             _position,
